@@ -1,0 +1,115 @@
+# Screener spółek z sektora robotyki humanoidalnej - rynki azjatyckie.
+#
+# Wszystkie wagi są względne: liczy się ich stosunek, nie suma.
+# Kierunek "high" = wyższa wartość jest lepsza, "low" = niższa jest lepsza.
+
+provider: yahoo
+universe: data/universe_humanoid_asia.csv
+
+# ~420 dni sesyjnych z zapasem, żeby SMA200 i zwroty 12M miały pełne okno.
+lookback_days: 420
+cache_dir: .cache
+cache_ttl_hours: 12
+
+# Domyślny profil scoringu (patrz sekcja "profiles" niżej).
+profile: growth
+
+# Indeks odniesienia dla siły względnej, dobierany po sufiksie tickera.
+benchmarks:
+  ".T": "^N225"      # Nikkei 225
+  ".KS": "^KS11"     # KOSPI
+  ".KQ": "^KQ11"     # KOSDAQ
+  ".TW": "^TWII"     # TAIEX
+  ".TWO": "^TWII"
+  ".HK": "^HSI"      # Hang Seng
+  ".SS": "000001.SS" # Shanghai Composite
+  ".SZ": "399001.SZ" # Shenzhen Component
+  default: "^N225"
+
+# Twarde bramki. Spółka, która ich nie przejdzie, nie trafia do rankingu.
+# null = filtr wyłączony.
+filters:
+  min_market_cap_usd: 150000000      # 150 mln USD
+  min_avg_turnover_usd: 500000       # 0,5 mln USD dziennego obrotu (20 sesji)
+  min_price_bars: 200                # bez tego SMA200 nie istnieje
+  max_debt_to_equity: 3.0
+  # Minimalny udział dostępnych danych fundamentalnych (0-1).
+  # Chroni przed wysokim wynikiem policzonym z dwóch wskaźników.
+  min_fundamental_coverage: 0.35
+
+profiles:
+
+  # Nastawienie na wzrost - dla spółek, które dopiero skalują biznes.
+  # Wycena waży mało, bo połowa sektora jest jeszcze nierentowna.
+  growth:
+    group_weights:
+      fundamental: 0.45
+      technical: 0.55
+    fundamental:
+      revenue_growth:     {weight: 3.0, direction: high}
+      earnings_growth:    {weight: 1.5, direction: high}
+      gross_margin:       {weight: 2.0, direction: high}
+      operating_margin:   {weight: 1.5, direction: high}
+      return_on_equity:   {weight: 1.5, direction: high}
+      fcf_margin:         {weight: 1.5, direction: high}
+      net_cash_to_mcap:   {weight: 1.5, direction: high}
+      debt_to_equity:     {weight: 1.5, direction: low}
+      price_to_sales:     {weight: 1.0, direction: low}
+    technical:
+      px_vs_sma200:       {weight: 2.5, direction: high}
+      px_vs_sma50:        {weight: 1.5, direction: high}
+      sma50_vs_sma200:    {weight: 2.0, direction: high}
+      rs_6m:              {weight: 2.5, direction: high}
+      rs_3m:              {weight: 2.0, direction: high}
+      ret_12m:            {weight: 1.5, direction: high}
+      macd_hist_pct:      {weight: 1.0, direction: high}
+      pos_52w_range:      {weight: 1.5, direction: high}
+      volume_trend:       {weight: 1.0, direction: high}
+
+  # Nastawienie na jakość i wycenę - dla dojrzałych producentów komponentów.
+  value:
+    group_weights:
+      fundamental: 0.70
+      technical: 0.30
+    fundamental:
+      earnings_yield:     {weight: 3.0, direction: high}
+      return_on_equity:   {weight: 2.5, direction: high}
+      operating_margin:   {weight: 2.0, direction: high}
+      fcf_margin:         {weight: 2.5, direction: high}
+      net_cash_to_mcap:   {weight: 2.0, direction: high}
+      debt_to_equity:     {weight: 2.0, direction: low}
+      current_ratio:      {weight: 1.0, direction: high}
+      ev_to_ebitda:       {weight: 2.0, direction: low}
+      price_to_book:      {weight: 1.5, direction: low}
+      revenue_growth:     {weight: 1.0, direction: high}
+    technical:
+      px_vs_sma200:       {weight: 2.0, direction: high}
+      sma50_vs_sma200:    {weight: 1.5, direction: high}
+      rs_6m:              {weight: 1.5, direction: high}
+      dist_52w_high:      {weight: 1.0, direction: low}
+      ret_12m:            {weight: 1.0, direction: high}
+
+  # Kompromis - równe traktowanie wzrostu, jakości, wyceny i trendu.
+  balanced:
+    group_weights:
+      fundamental: 0.50
+      technical: 0.50
+    fundamental:
+      revenue_growth:     {weight: 2.0, direction: high}
+      gross_margin:       {weight: 1.5, direction: high}
+      operating_margin:   {weight: 1.5, direction: high}
+      return_on_equity:   {weight: 2.0, direction: high}
+      fcf_margin:         {weight: 1.5, direction: high}
+      earnings_yield:     {weight: 1.5, direction: high}
+      net_cash_to_mcap:   {weight: 1.0, direction: high}
+      debt_to_equity:     {weight: 1.5, direction: low}
+      price_to_sales:     {weight: 1.0, direction: low}
+    technical:
+      px_vs_sma200:       {weight: 2.0, direction: high}
+      px_vs_sma50:        {weight: 1.0, direction: high}
+      sma50_vs_sma200:    {weight: 1.5, direction: high}
+      rs_6m:              {weight: 2.0, direction: high}
+      rs_3m:              {weight: 1.5, direction: high}
+      ret_12m:            {weight: 1.0, direction: high}
+      pos_52w_range:      {weight: 1.0, direction: high}
+      macd_hist_pct:      {weight: 1.0, direction: high}

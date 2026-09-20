@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screener robotyki humanoidalnej — Azja</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 16px 72px; }
+
+  header h1 { font-size: 1.6rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header .meta { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
+  header .meta b { color: var(--text-primary); font-weight: 600; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .card .note { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 18px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .v { font-size: 1.75rem; font-weight: 650; margin-top: 2px; }
+  .tile .s { font-size: 0.8rem; color: var(--text-muted); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; background: var(--surface-1); }
+  th:first-child, td:first-child,
+  th.left, td.left { text-align: left; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: color-mix(in srgb, var(--series-1) 7%, transparent); }
+  .rank { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tick-name { font-weight: 600; }
+  .sub { color: var(--text-muted); font-size: 0.78rem; font-weight: 400; }
+  .scorecell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .scorecell .v { font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; font-weight: 600; }
+  svg.bar, svg.spark { display: block; }
+
+  .scatter .tick, .scatter .axis-title, .scatter .quad, .scatter .point-label {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    fill: var(--text-muted);
+  }
+  .scatter .tick { font-size: 11px; }
+  .scatter .axis-title { font-size: 12px; fill: var(--text-secondary); }
+  .scatter .quad { font-size: 11px; font-style: italic; }
+  .scatter .point-label { font-size: 11px; fill: var(--text-primary); font-weight: 600; }
+
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--border); color: var(--text-secondary); }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.85rem; }
+  ul.plain li { margin-bottom: 4px; }
+  .empty { color: var(--text-muted); font-style: italic; }
+
+  .disclaimer { border-left: 3px solid var(--warning); padding-left: 14px; margin-top: 28px; color: var(--text-secondary); font-size: 0.85rem; }
+  .disclaimer b { color: var(--text-primary); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 16px 48px; }
+    header h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Screener robotyki humanoidalnej — rynki azjatyckie</h1>
+    <p class="meta">
+      Data: <b>{{ run_date }}</b> ·
+      Profil scoringu: <b>{{ profile_name }}</b> ·
+      Źródło danych: <b>{{ provider_name }}</b> ·
+      Uniwersum: <b>{{ screened }}</b> spółek
+    </p>
+  </header>
+
+  <div class="tiles">
+    {% for tile in tiles %}
+    <div class="tile">
+      <div class="k">{{ tile.label }}</div>
+      <div class="v">{{ tile.value }}</div>
+      <div class="s">{{ tile.sub }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <section class="card">
+    <h2>Fundamenty a technika</h2>
+    <p class="note">
+      Każda kropka to jedna spółka. Oś pozioma — wynik fundamentalny, oś pionowa — techniczny.
+      Obie osie to pozycja centylowa <b>wewnątrz tego uniwersum</b>, nie ocena bezwzględna.
+      Podpisane są spółki z czołówki rankingu; pozostałe znajdziesz w tabeli niżej.
+    </p>
+    {{ scatter_svg }}
+  </section>
+
+  <section class="card">
+    <h2>Ranking</h2>
+    <p class="note">Sortowanie według wyniku łącznego. Najedź kursorem na wiersz, aby go wyróżnić.</p>
+    <div class="legend">
+      <span><i class="swatch" style="background: var(--series-1)"></i> wynik fundamentalny</span>
+      <span><i class="swatch" style="background: var(--series-2)"></i> wynik techniczny</span>
+      <span>„{{ dash }}" = brak danych u dostawcy</span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">#</th>
+            <th class="left">Spółka</th>
+            <th class="left">Segment</th>
+            <th>Łącznie</th>
+            <th>Fund.</th>
+            <th>Tech.</th>
+            <th>Pokrycie</th>
+            <th>Kapitalizacja</th>
+            <th>Wzrost przych.</th>
+            <th>Marża oper.</th>
+            <th>ROE</th>
+            <th>C/Z</th>
+            <th>vs SMA200</th>
+            <th>RS 6M</th>
+            <th>RSI(14)</th>
+            <th class="left">Kurs 12M</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            <td class="left rank">{{ row.rank }}</td>
+            <td class="left">
+              <div class="tick-name">{{ row.name }}</div>
+              <div class="sub">{{ row.ticker }} · {{ row.market }}</div>
+            </td>
+            <td class="left"><span class="pill">{{ row.segment }}</span></td>
+            <td class="num"><b>{{ row.composite }}</b></td>
+            <td>
+              <div class="scorecell">{{ row.fund_bar }}<span class="v">{{ row.fundamental }}</span></div>
+            </td>
+            <td>
+              <div class="scorecell">{{ row.tech_bar }}<span class="v">{{ row.technical }}</span></div>
+            </td>
+            <td class="num">{{ row.coverage }}</td>
+            <td class="num">{{ row.market_cap }}</td>
+            <td class="num">{{ row.revenue_growth }}</td>
+            <td class="num">{{ row.operating_margin }}</td>
+            <td class="num">{{ row.roe }}</td>
+            <td class="num">{{ row.pe }}</td>
+            <td class="num">{{ row.px_vs_sma200 }}</td>
+            <td class="num">{{ row.rs_6m }}</td>
+            <td class="num">{{ row.rsi }}</td>
+            <td class="left">{{ row.spark }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Odrzucone przez filtry ({{ rejected|length }})</h2>
+    <p class="note">Te spółki nie weszły do rankingu i nie wpływają na pozycje centylowe pozostałych.</p>
+    {% if rejected %}
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th class="left">Spółka</th><th class="left">Rynek</th><th class="left">Powód</th></tr>
+        </thead>
+        <tbody>
+          {% for row in rejected %}
+          <tr>
+            <td class="left"><span class="tick-name">{{ row.name }}</span> <span class="sub">{{ row.ticker }}</span></td>
+            <td class="left">{{ row.market }}</td>
+            <td class="left">{{ row.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">Wszystkie spółki przeszły filtry.</p>
+    {% endif %}
+  </section>
+
+  {% if warnings %}
+  <section class="card">
+    <h2>Ostrzeżenia z przebiegu ({{ warnings|length }})</h2>
+    <ul class="plain">
+      {% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <p class="disclaimer">
+    <b>To nie jest rekomendacja inwestycyjna.</b>
+    Narzędzie porządkuje publicznie dostępne dane i liczy pozycje centylowe wewnątrz z góry
+    zadanej listy spółek. Wyniki są <b>względne</b>: zmiana uniwersum zmienia każdy wynik,
+    a wysoka pozycja w słabym zbiorze nadal oznacza słabą spółkę. Dane z darmowych źródeł
+    bywają niekompletne lub opóźnione — kolumna „Pokrycie" pokazuje, jaka część wskaźników
+    fundamentalnych była faktycznie dostępna. Każdą spółkę zweryfikuj w sprawozdaniach
+    finansowych przed jakąkolwiek decyzją.
+  </p>
+
+</div>
+</body>
+</html>
