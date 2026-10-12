@@ -65,6 +65,11 @@ python -m tracker alerts --discord              # potem: tylko nowości
 
 Do crona co godzinę w godzinach sesji USA — przykład w README.
 
+## 5b. TradingView (masz Premium)
+
+Instrukcja w `tradingview/README.md`: wklej wskaźnik w Pine Editor, ustaw alert
+z webhookiem Discorda. Jeśli Pine Editor pokaże błąd, wyślij mi treść.
+
 ## 6. Przegląd jakościowy (zasada: jakość, nie ilość)
 
 Po `validate` i pierwszej stronie z prawdziwymi danymi przejdź listy i wykreśl

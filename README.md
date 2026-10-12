@@ -330,6 +330,12 @@ Bez tej zmiennej `--discord` tylko informuje, że nic nie wysłał.
 **Czego nie wykryje:** reeli influencerów. Instagram nie ma API. Ślad po nich
 to zwykle skok wolumenu bez wyników i bez komunikatu spółki — to wyłapie reguła „wolumen”.
 
+## TradingView
+
+Wskaźnik `tradingview/rafmall_konfluencja.pine` rysuje na wykresie te same
+reguły co `tracker alerts` i wysyła alerty TradingView prosto na Discord przez
+webhook — w czasie rzeczywistym, bez komputera. Instrukcja: `tradingview/README.md`.
+
 ## Rutyna co godzinę
 
 `scan --new-only` pokazuje tylko to, co pojawiło się od poprzedniego

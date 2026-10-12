@@ -167,7 +167,7 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 
 - [x] poziomy ze szczytów i dołków gasnące po przebiciu → reguła „poziom” w `tracker alerts`
 - [x] konfluencja (kilka sygnałów naraz) → reguła „konfluencja”
-- [ ] wskaźnik Pine Script na TradingView z tym samym, co alertuje bot — opcjonalnie, na życzenie
+- [x] wskaźnik Pine Script na TradingView → `tradingview/rafmall_konfluencja.pine` (Rafał ma Premium; test na komputerze)
 - [ ] **nie bierzemy**: automatycznego składania zleceń. Narzędzie pokazuje, Rafał decyduje.
 
 ## Portfele twórców (tylko jako sygnał, co jest popularne)
@@ -187,7 +187,7 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 - [x] Warstwa 2: domyślnie NA STRONIE jako sekcja „Energia” (do odwołania)
 - [x] Sprzęt do chipów i pamięci: domyślnie W platforma/AI jako medium (do odwołania)
 - [x] ETF-y złoto/srebro/uran: domyślnie NA STRONIE w grupie „makro” (do odwołania)
-- [ ] Czy rafmall.ch jest nadal publikowana przez Lovable?
+- [x] Hosting rafmall.ch: własny hosting → strona jako plik `roboty.html` do wgrania
 - [ ] HTML strony z Lovable (do dopasowania wyglądu)
 - [ ] Które spółki są w portfelu, a które tylko obserwowane?
 
