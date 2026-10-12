@@ -403,6 +403,11 @@ def test_liquidity_floor():
 
     assert liquid_enough(_frame([50.0] * 80, [100_000] * 80), DEFAULTS)
     assert not liquid_enough(_frame([1.0] * 80, [100_000] * 80), DEFAULTS)  # penny
+    # a coin at 0.2 USD with 30 mln USD/day turnover is not a penny stock
+    assert liquid_enough(_frame([0.2] * 80, [150_000_000] * 80), DEFAULTS, crypto=True)
+    assert not liquid_enough(_frame([0.2] * 80, [150_000_000] * 80), DEFAULTS)
+    from tracker.market import illiquid_reason
+    assert illiquid_reason(_frame([0.2] * 80, [1_000] * 80), DEFAULTS, crypto=True).startswith("obrót")
     assert not liquid_enough(_frame([50.0] * 80, [1_000] * 80), DEFAULTS)   # thin
 
 
@@ -423,6 +428,7 @@ def test_tradingview_query_and_parse():
     assert any(f["left"] == "EMA30" for f in q["filter"]) and q["markets"] == ["NASDAQ"]
     payload = {"data": [{"s": "NASDAQ:NVDA", "d": ["NVDA", "NVIDIA", 190.0, 5e7, 2.4]},
                         {"s": "XETR:SIE", "d": ["SIE", "Siemens", 180.0, 1e6, 2.1]},
+                        {"s": "NYSE:FOUR/PA", "d": ["FOUR/PA", "Shift4 pref", 20.0, 1e5, 2.0]},
                         {"s": "garbage", "d": []}]}
     rows = parse_response(payload)
     assert [r["ticker"] for r in rows] == ["NVDA", "SIE"]

@@ -49,14 +49,25 @@ class Setup:
         return f"{self.rule}|{self.ticker}|{self.impulse_day or self.day}"
 
 
-def liquid_enough(prices: pd.DataFrame, cfg: dict) -> bool:
+def illiquid_reason(prices: pd.DataFrame, cfg: dict, crypto: bool = False) -> str | None:
+    """Why a symbol is skipped before the rules run, or None when it qualifies.
+
+    The price floor is for penny stocks only: a coin's unit price says nothing
+    about it (Arbitrum trades at 0.1-0.5 USD), so crypto is judged on dollar
+    turnover alone."""
     if prices is None or len(prices) < 60 or "volume" not in prices:
-        return False
+        return "za krótka historia"
     close = prices["close"].astype(float)
-    if float(close.iloc[-1]) < cfg["min_price"]:
-        return False
+    if not crypto and float(close.iloc[-1]) < cfg["min_price"]:
+        return f"kurs < {cfg['min_price']:g} USD"
     dollar = (close * prices["volume"].astype(float)).tail(20).mean()
-    return bool(np.isfinite(dollar) and dollar >= cfg["min_avg_dollar_volume"])
+    if not (np.isfinite(dollar) and dollar >= cfg["min_avg_dollar_volume"]):
+        return f"obrót < {cfg['min_avg_dollar_volume'] / 1e6:g} mln USD/dzień"
+    return None
+
+
+def liquid_enough(prices: pd.DataFrame, cfg: dict, crypto: bool = False) -> bool:
+    return illiquid_reason(prices, cfg, crypto) is None
 
 
 def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) -> Setup | None:

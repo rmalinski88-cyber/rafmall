@@ -64,6 +64,8 @@ def parse_response(payload: dict) -> list[dict]:
         if len(d) < 3 or ":" not in symbol:
             continue
         exchange, ticker = symbol.split(":", 1)
+        if "/" in ticker:   # preferred shares and warrants ('FOUR/PA'): not what the scan is for
+            continue
         rows.append({
             "ticker": ticker, "name": d[1] or ticker, "exchange": exchange,
             "close": d[2], "volume": d[3] if len(d) > 3 else None,

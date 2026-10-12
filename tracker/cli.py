@@ -457,7 +457,7 @@ def _market_symbols(ctx: Context) -> list[tuple[str, str]]:
 
 
 def _cmd_market(ctx: Context) -> int:
-    from .market import DEFAULTS, RULES, MarketScan, liquid_enough
+    from .market import DEFAULTS, RULES, MarketScan, illiquid_reason
     from .notify import send_discord
 
     a, cfg = ctx.args, ctx.config
@@ -504,6 +504,7 @@ def _cmd_market(ctx: Context) -> int:
 
     lookback = int(cfg.get("market_lookback_days", 200))
     scan = MarketScan(run_date=date.today().isoformat())
+    skipped: dict[str, list[str]] = {}
     for i, (ticker, name) in enumerate(symbols, 1):
         if i % 25 == 0 or i == len(symbols):
             print(f"  [{i}/{len(symbols)}] {ticker}   ", end="\r", file=sys.stderr, flush=True)
@@ -514,8 +515,10 @@ def _cmd_market(ctx: Context) -> int:
             continue
         if prices is None or prices.empty:
             continue
-        if not liquid_enough(prices, rules):
+        reason = illiquid_reason(prices, rules, crypto=ticker.upper().endswith("-USD"))
+        if reason:
             scan.skipped_illiquid += 1
+            skipped.setdefault(reason, []).append(ticker)
             continue
         scan.checked += 1
         for fn in chosen.values():
@@ -535,6 +538,8 @@ def _cmd_market(ctx: Context) -> int:
     title = (f"Skan rynku {scan.run_date} — {len(shown)} {'łącznie' if a.all else 'nowych'} setupów "
              f"({scan.checked} płynnych z {len(symbols)}; pominięto {scan.skipped_illiquid} mało płynnych)")
     print(title)
+    for reason, names in skipped.items():   # one line per reason, so a log run shows what the gate ate
+        print(f"  pominięte, {reason}: {', '.join(names[:40])}{' …' if len(names) > 40 else ''}")
     if shown:
         print(report.table(["Ticker", "Nazwa", "Kurs", "Obrót/dzień", "Sygnał", "Szczegóły"], [[
             s.ticker, s.name[:28], f"{s.last_close:.2f}", fmt.usd(s.avg_dollar_volume), s.headline, s.detail,
