@@ -31,7 +31,7 @@ SEGMENTS = [
 
 ETF_GROUPS = [
     ("humanoidy", "Humanoidy"), ("robotyka", "Robotyka i automatyka"), ("chipy", "Półprzewodniki"),
-    ("surowce", "Surowce krytyczne"), ("makro", "Metale i energia (makro)"), ("benchmark", "Punkty odniesienia"),
+    ("surowce", "Surowce krytyczne"), ("makro", "Metale i energia (makro)"), ("inne", "Inne tematy"), ("benchmark", "Punkty odniesienia"),
 ]
 
 

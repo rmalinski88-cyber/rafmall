@@ -16,7 +16,7 @@ Waga na stronie maleje od środka piramidy w obie strony:
 | średnia | 3 — Półprzewodniki i AI | chipy do sterowania i percepcji, sprzęt do produkcji chipów | `universe_humanoid_global.csv` → `platforma/AI` |
 | mniejsza | 2 — Infrastruktura fizyczna | energia, chłodzenie, sieci, transformatory (bez tego nie ma AI, więc nie ma humanoidów) | **nowy plik** `universe_infrastruktura.csv` — do decyzji |
 | mniejsza | 1 — Surowce krytyczne | miedź, ziemie rzadkie, uran; złoto/srebro jako makro | `universe_surowce.csv` |
-| kontekst | 4–6 — Cyberbezpieczeństwo, chmura, modele AI | nie dotyczą humanoidów bezpośrednio | tylko notatki / watchlista trackera |
+| osobna sekcja | Inne tematy — cyberbezpieczeństwo, chmura, fintech, obronność, cokolwiek ciekawego | **zasada Rafała: ciekawe spółki z każdego sektora trafiają na stronę**, w osobnej sekcji z własnym rankingiem | `universe_inne.csv` |
 
 ---
 

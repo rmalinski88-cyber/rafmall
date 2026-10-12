@@ -189,6 +189,8 @@ def _cmd_site(args, config, provider) -> int:
 _EXTRA_BLURBS = {
     "surowce": "Bez miedzi (silniki, okablowanie) i metali ziem rzadkich (magnesy w aktuatorach) humanoid nie powstanie. "
                "Złoto, srebro i uran to tło makro, nie łańcuch dostaw robota. Ranking liczony osobno — te spółki nie wpływają na wyniki humanoidów.",
+    "inne tematy": "Spółki spoza robotyki, które wpadły w oko: chmura GPU, cyberbezpieczeństwo, fintech, obronność. "
+                   "Osobny ranking — nie wpływają na wyniki humanoidów.",
     "energia": "Modele sterujące robotami uczą się w centrach danych, a te potrzebują prądu, chłodzenia i transformatorów. "
                "Ekspozycja pośrednia; ranking liczony osobno.",
 }

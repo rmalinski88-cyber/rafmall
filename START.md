@@ -19,6 +19,7 @@ python -m pytest tests -q                              # oczekiwane: wszystkie t
 python -m screener --universe data/universe_humanoid_global.csv validate
 python -m screener --universe data/universe_surowce.csv validate
 python -m screener --universe data/universe_infrastruktura.csv validate
+python -m screener --universe data/universe_inne.csv validate
 python -m screener --universe data/etf.csv validate
 ```
 
@@ -30,7 +31,8 @@ a ja je poprawię. Spółki z `confidence=medium` sprawdź w pierwszej kolejnoś
 
 ```bash
 python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html \
-  --extra "Surowce=data/universe_surowce.csv" --extra "Energia=data/universe_infrastruktura.csv"
+  --extra "Surowce=data/universe_surowce.csv" --extra "Energia=data/universe_infrastruktura.csv" \
+  --extra "Inne tematy=data/universe_inne.csv"
 ```
 
 Otwórz `out/site/roboty.html` w przeglądarce. To gotowy plik do wgrania na rafmall.ch.
