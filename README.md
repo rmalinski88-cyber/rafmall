@@ -133,7 +133,19 @@ python -m screener show 6324.T
 
 # Przebieg offline na danych syntetycznych (bez sieci)
 python -m screener --provider fixture run
+
+# Strona WWW z listą spółek - do wgrania na rafmall.ch
+python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
+# ...z kolumną "Insiderzy" z ostatniego skanu trackera:
+python -m screener --universe data/universe_humanoid_global.csv site --signals out/signals_2026-10-12.json
 ```
+
+`site` tworzy jeden samodzielny plik HTML (bez zależności zewnętrznych) z
+wyszukiwarką, filtrem rynku i segmentami: Humanoidy / Podzespoły /
+Integratorzy / Platforma i AI. `data/universe_humanoid_global.csv` to lista
+azjatycka plus USA i Europa (Tesla, NVIDIA, Teradyne, ABB, Siemens, Schaeffler,
+Infineon, producenci silników, LiDAR-ów i magnesów). Spółki oznaczone
+`confidence=medium` mają na stronie etykietę „do weryfikacji".
 
 Wyniki trafiają do `out/`:
 

@@ -66,6 +66,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     validate.add_argument("--limit", type=int, help="sprawdź tylko N pierwszych spółek")
 
+    site = sub.add_parser("site", help="wygeneruj stronę WWW z listą spółek (do wgrania na serwer)")
+    site.add_argument("--profile", help="profil scoringu")
+    site.add_argument("--limit", type=int, help="ogranicz uniwersum do N pierwszych spółek (do testów)")
+    site.add_argument("--out", default="out/site/roboty.html", help="docelowy plik HTML")
+    site.add_argument("--signals", help="plik signals_*.json z trackera - dołoży kolumnę Insiderzy")
+    site.add_argument("--title", default="Robotyka humanoidalna — spółki i dostawcy podzespołów")
+
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
 
@@ -94,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Błąd dostawcy danych: {exc}", file=sys.stderr)
         return 2
 
-    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show}
+    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show, "site": _cmd_site}
     try:
         return handlers[args.command](args, config, provider)
     except (FileNotFoundError, ValueError, KeyError) as exc:
@@ -133,6 +140,31 @@ def _cmd_run(args, config, provider) -> int:
         html_path = render_html(result, out_dir / f"report_{stamp}.html")
         print(f"HTML: {html_path}", file=sys.stderr)
 
+    return 0
+
+
+def _cmd_site(args, config, provider) -> int:
+    import json
+
+    from .report.site import render_site
+
+    universe = _universe_for(args, config)
+    print(f"Strona dla {len(universe)} spółek (źródło: {provider.name})...", file=sys.stderr)
+
+    def progress(position: int, total: int, ticker: str) -> None:
+        print(f"  [{position}/{total}] {ticker}", end="\r", file=sys.stderr, flush=True)
+
+    result = run_screen(universe, provider, config, args.profile, progress=progress)
+    print(" " * 60, end="\r", file=sys.stderr)
+
+    signals = None
+    if args.signals:
+        signals = json.loads(Path(args.signals).read_text(encoding="utf-8"))
+
+    path = render_site(result, args.out, signals=signals, title=args.title)
+    print(f"Strona: {path}", file=sys.stderr)
+    for warning in result.warnings:
+        print(f"  ! {warning}", file=sys.stderr)
     return 0
 
 

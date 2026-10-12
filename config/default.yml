@@ -24,7 +24,11 @@ benchmarks:
   ".HK": "^HSI"      # Hang Seng
   ".SS": "000001.SS" # Shanghai Composite
   ".SZ": "399001.SZ" # Shenzhen Component
-  default: "^N225"
+  ".SW": "^SSMI"     # SMI (Szwajcaria)
+  ".DE": "^GDAXI"    # DAX
+  ".PA": "^FCHI"     # CAC 40
+  # Tickery bez sufiksu to USA.
+  default: "^GSPC"
 
 # Twarde bramki. Spółka, która ich nie przejdzie, nie trafia do rankingu.
 # null = filtr wyłączony.
