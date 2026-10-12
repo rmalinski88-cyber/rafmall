@@ -1,64 +1,102 @@
 # Kandydaci ze screenów — lista kontrolna
 
 Zbierane z telefonu, do sprawdzenia na komputerze (`python -m screener validate`).
-Status: `dodać` → `w CSV` → `ticker OK` → `na stronie`
+Status: `dodać` → `w CSV` → `ticker OK` → `na stronie`. Tickery z sufiksami giełd (.WA, .ST, .AX) i klasy akcji (MOG-A) to moje domysły — do sprawdzenia.
 
-## Spółki — humanoidy i podzespoły (główna lista, pełna waga)
+## Zasada porządkowania: warstwy robota humanoidalnego
+
+Układ z piramidy Portfela Tradera („Jak podejść do inwestowania w AI”), dopasowany do humanoidów.
+Waga na stronie maleje od środka piramidy w obie strony:
+
+| Waga | Warstwa | Co to jest | Plik / segment |
+|---|---|---|---|
+| **główna** | Humanoidy | spółki z własnym robotem | `universe_humanoid_global.csv` → `humanoid` |
+| **główna** | Podzespoły mechaniczne | przekładnie, aktuatory, serwonapędy, łożyska, czujniki, magnesy | `universe_humanoid_global.csv` → `komponenty` |
+| **główna** | Integratorzy | producenci robotów i automatyki, kontraktowi producenci humanoidów | `universe_humanoid_global.csv` → `integrator` |
+| średnia | 3 — Półprzewodniki i AI | chipy do sterowania i percepcji, sprzęt do produkcji chipów | `universe_humanoid_global.csv` → `platforma/AI` |
+| mniejsza | 2 — Infrastruktura fizyczna | energia, chłodzenie, sieci, transformatory (bez tego nie ma AI, więc nie ma humanoidów) | **nowy plik** `universe_infrastruktura.csv` — do decyzji |
+| mniejsza | 1 — Surowce krytyczne | miedź, ziemie rzadkie, uran; złoto/srebro jako makro | `universe_surowce.csv` |
+| kontekst | 4–6 — Cyberbezpieczeństwo, chmura, modele AI | nie dotyczą humanoidów bezpośrednio | tylko notatki / watchlista trackera |
+
+---
+
+## Warstwa główna — humanoidy, podzespoły, integratorzy
 
 | # | Spółka | Ticker (do sprawdzenia) | Segment | Dlaczego interesuje | Źródło | Status |
 |---|---|---|---|---|---|---|
-| 1 | Moog | MOG-A (NYSE; jest też klasa B: MOG-B) | komponenty | precyzyjne sterowanie ruchem, aktuatory, serwonapędy | reel „7 ETF-ów” (B. Kucia), nr 1 | dodać |
+| 1 | Moog | MOG-A (jest też MOG-B) | komponenty | precyzyjne sterowanie ruchem, aktuatory, serwonapędy | reel „7 ETF-ów” (B. Kucia), nr 1 | dodać |
 | 2 | Symbotic | SYM | integrator | roboty magazynowe; ekspozycja pośrednia | reel „7 ETF-ów” | w CSV |
+| 3 | Palantir | PLTR | platforma/AI? | oprogramowanie AI; związek z humanoidami słaby — raczej watchlista trackera | portfel finanse_na_sterydach | do decyzji |
 
-## Spółki — surowce (osobny segment, mniejsza waga: tło dla humanoidów)
+## Warstwa 3 — półprzewodniki i AI (segment `platforma/AI`, średnia waga)
 
-Związek z humanoidami: **miedź** (silniki, okablowanie) i **metale ziem rzadkich** (magnesy) — bezpośredni.
-Złoto, srebro, uran — makro/inflacja, nie humanoidy; na stronie z adnotacją.
+| # | Spółka | Ticker | Co robi | Źródło | Status |
+|---|---|---|---|---|---|
+| 1 | NVIDIA | NVDA | **w CSV** | wiele | w CSV |
+| 2 | TSMC | 2330.TW (ADR: TSM) | **w CSV** | wiele | w CSV |
+| 3 | Broadcom | AVGO | układy custom AI, sieci | slajd „AI w praktyce”, portfel finanse_na_sterydach | dodać |
+| 4 | Micron | MU | pamięci HBM do AI | portfel finanse_na_sterydach | dodać |
+| 5 | Marvell | MRVL | układy do datacenter | portfel finanse_na_sterydach | dodać |
+| 6 | ASML | ASML | litografia — sprzęt do produkcji chipów | slajd „AI w praktyce” | dodać (medium) |
+| 7 | Lam Research | LRCX | sprzęt do produkcji chipów | j.w. | dodać (medium) |
+| 8 | Applied Materials | AMAT | sprzęt do produkcji chipów | j.w. | dodać (medium) |
+| 9 | KLA | KLAC | kontrola jakości w produkcji chipów | j.w. | dodać (medium) |
+| 10 | Intel | INTC | największa pozycja rządu USA (8,9 mld USD); produkcja chipów w USA | slajd „USA walczą o swoje surowce” (CATO) | dodać (medium) |
+| 11 | GlobalFoundries | GFS | 675 mln USD od rządu USA; produkcja chipów | j.w. | dodać (medium) |
+| 12 | Qualcomm, Ambarella | QCOM, AMBA | **w CSV** | | w CSV |
+| — | SPCX | SPCX | z portfela finanse_na_sterydach; nie wiem, co to za spółka — sprawdzić na komputerze | reel | sprawdzić |
+
+## Warstwa 2 — infrastruktura fizyczna (mniejsza waga, do decyzji czy na stronę)
+
+Teza ze slajdów: centra danych pochłaniają prąd, budowa sieci trwa lata, brakuje dużych transformatorów, OZE nie rozwiąże problemu. Hyperscalerzy (Microsoft, Meta, Alphabet, Amazon, Oracle) wydają w 2026 ok. 600+ mld USD na infrastrukturę AI (Bloomberg).
+
+| # | Spółka | Ticker | Co robi | Źródło | Status |
+|---|---|---|---|---|---|
+| 1 | Vertiv | VRT | chłodzenie i zasilanie datacenter | slajd „AI w praktyce”, warstwa 2 | do decyzji |
+| 2 | Vistra | VST | energetyka (w tym jądrowa) | j.w. | do decyzji |
+| 3 | GE Vernova | GEV | turbiny, sieci, transformatory | j.w. | do decyzji |
+| 4 | Quanta Services | PWR | budowa sieci przesyłowych | j.w. | do decyzji |
+| 5 | Cameco | CCJ | uran — paliwo dla energetyki jądrowej | j.w. | w `universe_surowce.csv` |
+
+## Warstwa 1 — surowce krytyczne (`universe_surowce.csv`, osobny ranking, mniejsza waga)
+
+Związek bezpośredni z humanoidami: **miedź** (silniki, okablowanie), **metale ziem rzadkich** (magnesy neodymowe w aktuatorach).
+Slajd EUISS: Chiny dominują w wydobyciu ziem rzadkich (ok. 70% światowego wydobycia w 2025), stąd rząd USA finansuje własne źródła.
 
 | # | Spółka | Ticker | Metal | Uwagi | Źródło | Status |
 |---|---|---|---|---|---|---|
-| 1 | Freeport-McMoRan | FCX | miedź | największy producent miedzi notowany w USA | Portfel Tradera, „Spółki miedziowe” + „AI w praktyce” | dodać |
-| 2 | Southern Copper | SCCO | miedź | | j.w. | dodać |
-| 3 | KGHM Polska Miedź | KGH.WA | miedź, srebro | GPW; na slajdzie „KGH”, u Yahoo sufiks .WA | Portfel Tradera | dodać |
-| 4 | Boliden | BOL.ST | miedź, cynk | Sztokholm; na slajdzie „BOL” | Portfel Tradera | dodać |
-| 5 | MP Materials | MP | ziemie rzadkie | **już w CSV** (segment komponenty) | slajd „AI w praktyce”, warstwa 1 | w CSV |
-| 6 | US Rare Earths / USA Rare Earth | ? | ziemie rzadkie | na slajdzie bez tickera; sprawdzić, czy notowana i pod jakim symbolem | slajd „AI w praktyce” | sprawdzić |
-| 7 | Cameco | CCJ | uran | paliwo jądrowe (energia dla AI/datacenter) | slajd „AI w praktyce” | dodać (makro) |
-| 8 | Newmont | NEM | złoto | 10,89% GDX | TOP10 GDX | dodać (makro) |
-| 9 | Agnico Eagle Mines | AEM | złoto | 10,87% GDX | TOP10 GDX | dodać (makro) |
-| 10 | Barrick Mining | B | złoto | 7,42% GDX; dawniej GOLD, zmiana nazwy/tickera — sprawdzić | TOP10 GDX | dodać (makro) |
-| 11 | Wheaton Precious Metals | WPM | złoto/srebro (streaming) | 5,96% | TOP10 GDX | dodać (makro) |
-| 12 | AngloGold Ashanti | AU | złoto | 5,01% | TOP10 GDX | dodać (makro) |
-| 13 | Franco-Nevada | FNV | złoto (royalty) | 4,91% | TOP10 GDX | dodać (makro) |
-| 14 | Kinross Gold | KGC | złoto | 4,16% | TOP10 GDX | dodać (makro) |
-| 15 | Gold Fields | GFI | złoto | 4,12% | TOP10 GDX | dodać (makro) |
-| 16 | Pan American Silver | PAAS | srebro | 2,59% | TOP10 GDX | dodać (makro) |
-| 17 | Northern Star Resources | NST.AX | złoto | 2,43%; Australia, na slajdzie „NST” | TOP10 GDX | dodać (makro) |
+| 1 | Freeport-McMoRan | FCX | miedź | | Portfel Tradera | w CSV |
+| 2 | Southern Copper | SCCO | miedź | | Portfel Tradera | w CSV |
+| 3 | KGHM Polska Miedź | KGH.WA | miedź, srebro | GPW | Portfel Tradera | w CSV |
+| 4 | Boliden | BOL.ST | miedź, cynk | Sztokholm | Portfel Tradera | w CSV |
+| 5 | MP Materials | MP | ziemie rzadkie | 400 mln USD od rządu USA; także na liście głównej | CATO, „AI w praktyce” | w CSV |
+| 6 | USA Rare Earth | ? | ziemie rzadkie, magnesy | 1,6 mld USD od rządu USA; czy notowana i pod jakim tickerem — sprawdzić | CATO | sprawdzić |
+| 7 | Korea Zinc | 010130.KS? | cynk, metale krytyczne | 1,6 mld USD od rządu USA; Seul — ticker do sprawdzenia | CATO | dodać (medium) |
+| 8 | Vulcan Elements | — | magnezy ziem rzadkich (USA) | 670 mln USD od rządu; prawdopodobnie prywatna — sprawdzić | CATO | sprawdzić |
+| 9 | Cameco | CCJ | uran | makro / energia | | w CSV |
+| 10–19 | Newmont, Agnico Eagle, Barrick, Wheaton, AngloGold, Franco-Nevada, Kinross, Gold Fields, Pan American Silver, Northern Star | NEM, AEM, B, WPM, AU, FNV, KGC, GFI, PAAS, NST.AX | złoto / srebro | makro, TOP10 GDX | Portfel Tradera | w CSV |
 
-## Spółki — AI / infrastruktura (ze slajdu „Jak podejść do inwestowania w AI”)
+Pozostałe pozycje rządu USA ze slajdu CATO (nie surowce): L3Harris (LHX, obronność, 1 mld), IBM (IBM, komputery kwantowe, 1 mld), SandboxAQ (prywatna, 500 mln), iPulse (?, 250 mln). Tylko notatka.
 
-Warstwy 2–3 pasują do segmentu **platforma/AI** i do „infrastruktury fizycznej” (energia, chłodzenie).
-Warstwy 4–6 (cyberbezpieczeństwo, chmura) nie dotyczą humanoidów — zapisane tylko jako kontekst.
+## Warstwy 4–6 — kontekst, nie na stronę
 
-| Warstwa | Spółki | Tickery (do sprawdzenia) | Co z tym zrobić |
-|---|---|---|---|
-| 3 półprzewodniki | Nvidia, Broadcom, ASML, Lam Research, Applied Materials, KLA, TSMC | NVDA, AVGO, ASML, LRCX, AMAT, KLAC, TSM / 2330.TW | NVDA i TSMC już są; reszta to sprzęt do produkcji chipów — do segmentu platforma/AI jako `medium` |
-| 2 infrastruktura fizyczna | Vertiv, Vistra, GE Vernova, Quanta Services | VRT, VST, GEV, PWR | energia i chłodzenie dla datacenter — osobny segment „infrastruktura AI”? Do decyzji |
-| 4 cyberbezpieczeństwo | Palo Alto, CrowdStrike, Fortinet, Cloudflare | PANW, CRWD, FTNT, NET | nie dotyczy humanoidów — pomijamy |
-| 5–6 platformy / AI | Google, Amazon, Microsoft, Meta | GOOGL, AMZN, MSFT, META | są w watchliście trackera, nie na stronie |
+- Cyberbezpieczeństwo: CIBR, Palo Alto (PANW), CrowdStrike (CRWD), Fortinet (FTNT), Cloudflare (NET).
+- Chmura i modele: Google (GOOGL), Amazon (AMZN), Microsoft (MSFT), Meta (META), Oracle (ORCL) — są w watchliście trackera.
+
+---
 
 ## ETF-y (osobna sekcja na stronie, bez scoringu fundamentalnego)
 
-### Humanoidy i robotyka
+### Humanoidy, robotyka, półprzewodniki
 
 | ETF | Ticker | Emitent | Uwagi | Źródło | Status |
 |---|---|---|---|---|---|
 | KraneShares Global Humanoid & Embodied Intelligence Index ETF | KOID (Nasdaq) | KraneShares | 35,27 USD na 17 wrz 2026 wg screenu | reele B. Kucia, finanse_na_sterydach | dodać |
 | Roundhill Humanoid Robotics ETF | HUMN (BATS) | Roundhill | 29,33 USD na 17 wrz 2026 | reel finanse_na_sterydach | dodać |
-| Global X Robotics & AI ETF | BOTZ | Global X | — | z mojej wiedzy, nie ze screenów; do weryfikacji | kandydat |
-| iShares Automation & Robotics / Global Robotics | RBOT | iShares | na slajdzie „AI w praktyce”, warstwa 2 | Portfel Tradera | dodać |
-| ETF WIRE | WIRE | ? | na slajdzie warstwa 2 „infrastruktura fizyczna”; emitent i pełna nazwa do sprawdzenia | Portfel Tradera | sprawdzić |
+| iShares Robotics / Automation | RBOT | iShares | slajd „AI w praktyce”, warstwa 2 | Portfel Tradera | dodać |
+| Global X Robotics & AI | BOTZ | Global X | z mojej wiedzy, nie ze screenów | — | kandydat |
 | VanEck Semiconductor | SMH | VanEck | warstwa 3 | Portfel Tradera | dodać (tło) |
+| ETF WIRE | WIRE | ? | warstwa 2; emitent i pełna nazwa do sprawdzenia | Portfel Tradera | sprawdzić |
 
 ### Surowce (tło)
 
@@ -68,37 +106,43 @@ Warstwy 4–6 (cyberbezpieczeństwo, chmura) nie dotyczą humanoidów — zapisa
 | Sprott Junior Copper Miners | COPJ | mniejsze spółki miedziowe | dodać |
 | Sprott Physical Copper Trust | COP.UN (Toronto) / SCOP | fizyczna miedź | dodać (ticker Yahoo do sprawdzenia) |
 | VanEck Rare Earth & Strategic Metals | REMX | metale ziem rzadkich | dodać |
-| Sprott Uranium Miners (URNU na slajdzie) | URNM / URNU | spółki uranowe; URNU to wersja europejska (UCITS) — sprawdzić, która ma być | sprawdzić |
+| Sprott Uranium Miners | URNM (USA) / URNU (UCITS, Europa) | spółki uranowe — sprawdzić, która wersja | sprawdzić |
 | Global X Uranium | URA | uran + sektor nuklearny | dodać (makro) |
 | Sprott Junior Uranium Miners | URNJ | małe spółki uranowe | dodać (makro) |
 | Sprott Physical Uranium Trust | U.UN (Toronto) / SRUUF | fizyczny uran | dodać (makro) |
-| VanEck Gold Miners | GDX | duże kopalnie złota | dodać (makro) |
-| VanEck Junior Gold Miners | GDXJ | mniejsze kopalnie złota/srebra | dodać (makro) |
-| Global X Silver Miners | SIL | kopalnie srebra | dodać (makro) |
-| Amplify Junior Silver Miners | SILJ | małe kopalnie srebra | dodać (makro) |
-| Sprott Physical Gold Trust | PHYS | złoto fizyczne | dodać (makro) |
-| Sprott Physical Silver Trust | PSLV | srebro fizyczne | dodać (makro) |
-| Sprott Physical Gold and Silver Trust | CEF | złoto + srebro | dodać (makro) |
-| abrdn Physical Platinum | PPLT | platyna | dodać (makro) |
-| abrdn Physical Palladium | PALL | pallad | dodać (makro) |
-| Sprott Physical Platinum and Palladium | SPPP | platyna + pallad | dodać (makro) |
-| abrdn Precious Metals Basket | GLTR | złoto, srebro, platyna, pallad | dodać (makro) |
+| VanEck Gold Miners / Junior | GDX / GDXJ | kopalnie złota | dodać (makro) |
+| Global X Silver Miners / Amplify Junior Silver | SIL / SILJ | kopalnie srebra | dodać (makro) |
+| Sprott Physical Gold / Silver / Gold+Silver | PHYS / PSLV / CEF | metal fizyczny | dodać (makro) |
+| abrdn Platinum / Palladium / Basket, Sprott Pt+Pd | PPLT / PALL / GLTR / SPPP | metale szlachetne | dodać (makro) |
 | SPDR S&P Global Natural Resources | GNR | surowce rolne + energetyczne + metale; NAV 77,03 USD, AUM 5,27 mld, TER 0,40% (22 wrz 2026) | dodać (makro) |
+| Invesco DB Commodity Index | DBC | szeroki koszyk surowców; +47,3% YTD 2026 wg tabeli Bilello | kandydat (benchmark surowców) |
 
-### Pozostałe ze slajdów (kontekst, nie na stronę)
+### Klasy aktywów do porównań (z tabeli Charlie Bilello, stan 18 wrz 2026)
 
-CIBR (cyberbezpieczeństwo).
+SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte), VWO (wschodzące), GLD (złoto), TLT (obligacje), DBC (surowce), BTC. Przydadzą się jako benchmarki na stronie: „jak humanoidy radzą sobie na tle rynku”.
 
-## Notatki ze slajdów (kontekst makro, do ewentualnego opisu na stronie)
+---
 
-- BofA Fund Manager Survey, wrzesień 2026: najbardziej zatłoczona pozycja to „long global semiconductors” (53%), dalej short obligacje USA (18%), long Magnificent 7 (7%). Wniosek: półprzewodniki są dziś konsensusem, więc ryzyko korekty jest wyższe niż w niszy humanoidów.
-- Teza Portfela Tradera: surowce są historycznie tanie względem akcji (BCOM/SPX najniżej od lat 90.), a deglobalizacja, zbrojenia i inflacja mają je wspierać. To argument za segmentem „Surowce” na stronie jako tłem, nie jako głównym tematem.
+## Notatki makro (kontekst do opisu na stronie)
+
+- **BofA Fund Manager Survey, wrz 2026**: najbardziej zatłoczona pozycja „long global semiconductors” (53%). Nisza humanoidów jest mniej wyeksploatowana niż chipy.
+- **Surowce vs akcje**: BCOM/SPX najniżej od lat 90.; Fidelity i Incrementum pokazują początek nowej hossy surowcowej. Portfel Tradera: deglobalizacja, zbrojenia, inflacja.
+- **2026 YTD** (Bilello): surowce DBC +47,3%, US Value +20,9%, Nasdaq +17,7%, S&P +12,6%, złoto +1,2%, obligacje na minusie, BTC −7,6%.
+- **Hyperscalerzy**: capex na AI rośnie z ~200 mld USD (2024) do ~600+ mld (2026). Wąskie gardło to prąd i transformatory, nie chipy.
+- **Rząd USA** inwestuje bezpośrednio w spółki (Intel 8,9 mld, Korea Zinc 1,6 mld, USA Rare Earth 1,6 mld, MP Materials 400 mln) — państwowe wsparcie dla łańcucha dostaw ziem rzadkich i chipów.
+
+## Portfele twórców (tylko jako sygnał, co jest popularne)
+
+- **finanse_na_sterydach** (po 4 mies.): AVGO, SPCX, MU, PLTR, MRVL. Dwie z pięciu to pamięci/układy dla datacenter.
+
+---
 
 ## Pytania do Rafała
 
-- [ ] Screen nr 4 z pierwszej paczki (z „1”): czy to Moog, czy inna firma?
-- [ ] Czy spółki wydobywcze mają mieć własny ranking (proponuję: tak, osobny segment „Surowce” na końcu strony)?
-- [ ] Czy dodawać warstwę „infrastruktura AI” (Vertiv, Vistra, GE Vernova, Quanta)? Pośredni związek z humanoidami.
+- [ ] Screen z „1” (pierwsza paczka): czy to Moog?
+- [ ] Warstwa 2 „infrastruktura fizyczna” (Vertiv, Vistra, GE Vernova, Quanta): osobny segment na stronie, czy pominąć?
+- [ ] Sprzęt do produkcji chipów (ASML, LRCX, AMAT, KLAC) i pamięci (MU, MRVL): do segmentu platforma/AI, czy to już za daleko?
+- [ ] ETF-y na złoto/srebro/uran: pokazywać na stronie w sekcji surowce, czy tylko miedź i ziemie rzadkie?
 - [ ] Czy rafmall.ch jest nadal publikowana przez Lovable?
 - [ ] HTML strony z Lovable (do dopasowania wyglądu)
 - [ ] Które spółki są w portfelu, a które tylko obserwowane?
@@ -107,15 +151,17 @@ CIBR (cyberbezpieczeństwo).
 
 - [ ] `python -m screener --universe data/universe_humanoid_global.csv validate`
 - [ ] `python -m screener --universe data/universe_surowce.csv validate`
-- [ ] poprawić tickery ze statusem BŁĄD (szczególnie: KGH.WA, BOL.ST, NST.AX, B, COP.UN, U.UN, MOG-A)
+- [ ] poprawić tickery ze statusem BŁĄD (szczególnie: KGH.WA, BOL.ST, NST.AX, B, COP.UN, U.UN, MOG-A, Korea Zinc)
+- [ ] sprawdzić: co to SPCX; ticker USA Rare Earth; czy Vulcan Elements jest notowana; pełna nazwa ETF WIRE; URNM vs URNU
 - [ ] pobrać pełny skład KOID (kraneshares.com) i HUMN (roundhillinvestments.com) — spółki obecne w obu ETF-ach, a nieobecne na naszej liście, to kandydaci nr 1
 - [ ] odszukać pozostałe ETF-y z reela „Te 7 ETF-ów prawdopodobnie przebije S&P500” (Bartosz Kucia) — na screenach był tylko KOID (nr 3)
-- [ ] sprawdzić: ticker „US Rare Earths”, pełna nazwa ETF „WIRE”, URNM vs URNU
 - [ ] wygenerować `roboty.html` i obejrzeć
 
 ## Do zrobienia w kodzie (mogę z telefonu)
 
 - [x] lista spółek surowcowych jako osobny plik `data/universe_surowce.csv`
+- [ ] dopisać warstwę 3 do `universe_humanoid_global.csv` (po decyzji Rafała)
 - [ ] sekcja „ETF-y” na stronie: kurs, zwroty, trend, bez C/Z i marż
 - [ ] sekcja „Surowce” na stronie: osobny ranking, na końcu, z adnotacją o mniejszej wadze
 - [ ] KOID jako dodatkowy benchmark siły względnej dla spółek z listy
+- [ ] porównanie „humanoidy vs klasy aktywów” (KOID/HUMN vs SPY, QQQ, DBC, GLD) na stronie
