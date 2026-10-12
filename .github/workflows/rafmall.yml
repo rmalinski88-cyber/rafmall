@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, alerts, market, scan, screener, site]
+        options: [check, first_run, alerts, market, scan, screener, site]
   schedule:
     # czas UTC; sesja USA to ok. 13:30-21:00 UTC
     - cron: "0 14-21 * * 1-5"   # alerts
@@ -23,7 +23,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
     env:
       SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
@@ -65,6 +65,9 @@ jobs:
           [ -n "$FTP_DIR" ] || unset FTP_DIR
           case "${{ steps.pick.outputs.zadanie }}" in
             check)    python -m tracker check ;;
+            # Pierwsze uruchomienie na prawdziwych danych: testy, validate 7 list, replay ARB,
+            # alerty, scan, skan rynku (150 symboli), strona. Log w out/first_run_*.log (artifact).
+            first_run) pip install -q pytest && python scripts/first_run.py ;;
             alerts)   python -m tracker alerts --discord ;;
             market)   python -m tracker market --discord ;;
             scan)     python -m tracker scan --new-only --no-quotes ;;
