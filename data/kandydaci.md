@@ -182,7 +182,15 @@ Reel finanse_na_sterydach „4 spółki, które dokupuję na spadkach” (4 czer
 - [ ] HTML strony z Lovable (do dopasowania wyglądu)
 - [ ] Które spółki są w portfelu, a które tylko obserwowane?
 
+## Zasady od Rafała
+
+- **Ciekawe spółki z każdego sektora** trafiają na stronę, w osobnej sekcji z własnym rankingiem.
+- **Jakość, nie ilość.** To, co wrzuca ze screenów, to kandydaci do sprawdzenia; po weryfikacji część odpada.
+- **Powiadomienia: Discord** (webhook). Rutyna Claude ewentualnie osobno, do streszczeń.
+
 ## Do zrobienia na komputerze (wymaga internetu)
+
+- [ ] przegląd jakościowy wszystkich list po `validate` — wykreślić, co się nie broni
 
 - [ ] `python -m screener --universe data/universe_humanoid_global.csv validate`
 - [ ] `python -m screener --universe data/universe_surowce.csv validate`

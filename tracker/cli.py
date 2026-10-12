@@ -67,6 +67,14 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--out-dir", default="out", help="katalog na raporty")
     scan.add_argument("--top", type=int, default=25, help="ile sygnałów pokazać w konsoli")
 
+    alerts = sub.add_parser("alerts", help="anomalie: skoki wolumenu i ceny, wybicia, okazje zakupowe (do rutyny co godzinę)")
+    alerts.add_argument("--universe", action="append", default=[], metavar="PLIK.csv",
+                        help="listy spółek do sprawdzenia; domyślnie wszystkie z configu (alerts_universes)")
+    alerts.add_argument("--all", action="store_true", help="pokaż wszystkie alerty, nie tylko nowe od ostatniego razu")
+    alerts.add_argument("--no-smart", action="store_true", help="pomiń transakcje insiderów/Kongresu")
+    alerts.add_argument("--discord", action="store_true", help="wyślij na Discord (DISCORD_WEBHOOK_URL)")
+    alerts.add_argument("--out-dir", default="out", help="katalog na JSON z alertami")
+
     sub.add_parser("check", help="sprawdź konfigurację i dostęp do źródeł danych")
     return parser
 
@@ -126,7 +134,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     handlers = {"find": _cmd_find, "quote": _cmd_quote, "congress": _cmd_congress,
-                "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check}
+                "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check,
+                "alerts": _cmd_alerts}
     try:
         code = handlers[args.command](ctx)
     except (FeedError, ProviderError, FileNotFoundError, ValueError) as exc:
@@ -320,6 +329,80 @@ def _cmd_scan(ctx: Context) -> int:
     for rep in fund_reports:
         store.remember_key(f"13f|{rep.fund.key}|{rep.filed_now}")
     store.save()
+    return 0
+
+
+def _cmd_alerts(ctx: Context) -> int:
+    from .alerts import DEFAULTS, AlertRun, detect, order, smart_money_alerts
+    from .notify import format_text, send_discord
+
+    a, cfg = ctx.args, ctx.config
+    rules = {**DEFAULTS, **(cfg.get("alert_rules") or {})}
+    portfolio = tickers(ctx.portfolio())
+    dips = {r["ticker"]: float(r.get("max_drawdown_pct") or rules["dip_default_pct"])
+            for r in load_symbols(cfg.get("dip_list", "data/okazje.csv"))}
+
+    files = a.universe or cfg.get("alerts_universes") or []
+    symbols: dict[str, str] = {}
+    for path in files:
+        for row in load_symbols(path):
+            symbols.setdefault(row["ticker"], row.get("name") or row["ticker"])
+    for t in portfolio | set(dips) | tickers(ctx.watchlist()):
+        symbols.setdefault(t, t)
+
+    lookback = int(cfg.get("lookback_days", 420))
+    run = AlertRun(run_date=date.today().isoformat())
+    for i, (ticker, name) in enumerate(sorted(symbols.items()), 1):
+        print(f"  [{i}/{len(symbols)}] {ticker}   ", end="\r", file=sys.stderr, flush=True)
+        try:
+            prices = ctx.provider.get_prices(ticker, lookback)
+        except Exception as exc:
+            run.warnings.append(f"{ticker}: {exc}")
+            continue
+        if prices is None or prices.empty:
+            run.warnings.append(f"{ticker}: brak notowań")
+            continue
+        run.checked += 1
+        run.alerts.extend(detect(ticker, name, prices, rules, dips.get(ticker), ticker in portfolio))
+    print(" " * 40, end="\r", file=sys.stderr)
+
+    store = SeenStore(cfg.get("alerts_state_file", ".cache/tracker_alerts_seen.json"))
+    if not a.no_smart:
+        since = ctx.since("insider_days", 7)
+        trades = ctx.feed.congress_trades(since)
+        for t in sorted(portfolio | set(dips)):
+            if not t.endswith("-USD"):
+                trades.extend(ctx.feed.insider_trades(t, since))
+        trade_store = SeenStore(cfg.get("state_file", ".cache/tracker_seen.json"))
+        fresh = trade_store.new(trades)
+        run.alerts.extend(smart_money_alerts(fresh, portfolio))
+        run.warnings.extend(ctx.feed.warnings)
+
+    fresh_alerts = [x for x in run.alerts if store.is_new_key(x.key)]
+    shown = order(run.alerts if a.all else fresh_alerts)
+    title = f"Alerty {run.run_date} — {len(shown)} {'łącznie' if a.all else 'nowych'} ({run.checked} instrumentów)"
+    print(format_text(shown, title, markdown=False))
+
+    out_dir = Path(a.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / f"alerts_{run.run_date}.json").write_text(json.dumps({
+        "run_date": run.run_date, "checked": run.checked,
+        "alerts": [x.__dict__ for x in shown], "warnings": run.warnings,
+    }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+    if a.discord and shown:
+        try:
+            sent = send_discord(format_text(shown, title))
+            print("Discord: wysłano" if sent else "Discord: brak DISCORD_WEBHOOK_URL — nie wysłano", file=sys.stderr)
+        except Exception as exc:
+            print(f"Discord: błąd wysyłki ({exc})", file=sys.stderr)
+    elif a.discord:
+        print("Discord: nic nowego, nie wysyłam", file=sys.stderr)
+
+    for x in run.alerts:
+        store.remember_key(x.key)
+    store.save()
+    _print_warnings(run.warnings)
     return 0
 
 

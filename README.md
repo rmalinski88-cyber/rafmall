@@ -298,6 +298,36 @@ na górę listy.
 Pomijane celowo: przydziały akcji, realizacja opcji, podatki i darowizny
 (Form 4 kody A/M/F/G) — to ruchy mechaniczne, nie decyzje inwestycyjne.
 
+## Alerty: anomalie i okazje zakupowe
+
+```bash
+python -m tracker alerts                 # co nowego od ostatniego sprawdzenia
+python -m tracker alerts --all           # wszystkie bieżące alerty
+python -m tracker alerts --discord       # ...i wyślij na Discord
+```
+
+Sprawdza wszystkie listy z `config/tracker.yml` (`alerts_universes`) plus
+portfel, obserwowane i `data/okazje.csv`. Sześć reguł:
+
+| Alert | Warunek |
+|---|---|
+| okazja | spółka z `data/okazje.csv` spadła o swój próg poniżej szczytu 52T albo jest pod SMA200 |
+| wolumen | wolumen dnia ≥ 3× średnia 20 sesji |
+| ruch | zmiana dnia ≥ 2,5× ATR(14) — próg skaluje się ze zmiennością spółki |
+| wybicie | nowy szczyt lub dołek 52 tygodni |
+| trend | kurs przebija SMA50 lub SMA200 |
+| smart money | nowe zgłoszenia insiderów / Kongresu dla portfela i okazji |
+
+Alerty z portfela idą pierwsze, potem okazje, potem reszta według nietypowości.
+Każdy alert zgłaszany jest raz (stan w `.cache/tracker_alerts_seen.json`).
+
+**Discord:** w ustawieniach kanału → Integracje → Webhooki → Nowy webhook →
+skopiuj adres i ustaw `export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."`.
+Bez tej zmiennej `--discord` tylko informuje, że nic nie wysłał.
+
+**Czego nie wykryje:** reeli influencerów. Instagram nie ma API. Ślad po nich
+to zwykle skok wolumenu bez wyników i bez komunikatu spółki — to wyłapie reguła „wolumen”.
+
 ## Rutyna co godzinę
 
 `scan --new-only` pokazuje tylko to, co pojawiło się od poprzedniego
@@ -307,6 +337,7 @@ przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
 ```cron
 CRON_TZ=America/New_York
 0 9-16 * * 1-5  cd ~/rafmall && python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
+30 9-16 * * 1-5 cd ~/rafmall && python -m tracker alerts --discord >> out/alerts.log 2>&1
 ```
 
 Ten sam przebieg może uruchamiać rutyna Claude — wystarczy prompt w stylu:

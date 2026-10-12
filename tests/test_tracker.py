@@ -241,6 +241,7 @@ def offline_config(tmp_path):
     src = open("config/tracker.yml", encoding="utf-8").read()
     cfg = tmp_path / "tracker.yml"
     cfg.write_text(src.replace(".cache/tracker_seen.json", str(tmp_path / "seen.json"))
+                      .replace(".cache/tracker_alerts_seen.json", str(tmp_path / "alerts_seen.json"))
                       .replace("cache_dir: .cache", f"cache_dir: {tmp_path / 'cache'}"), encoding="utf-8")
     return cfg
 
@@ -264,3 +265,73 @@ def test_scan_writes_reports_and_then_reports_nothing_new(offline_config, tmp_pa
 ])
 def test_commands_run_offline(offline_config, command):
     assert main(["--config", str(offline_config), "--feed", "fixture", "--no-cache", *command]) == 0
+
+
+# -- alerts ----------------------------------------------------------------
+
+
+def _frame(closes, volumes=None):
+    import numpy as np
+    import pandas as pd
+
+    n = len(closes)
+    closes = np.asarray(closes, dtype=float)
+    volumes = np.asarray(volumes if volumes is not None else [1_000_000] * n, dtype=float)
+    idx = pd.bdate_range(end="2026-10-09", periods=n)
+    return pd.DataFrame({"open": closes, "high": closes * 1.01, "low": closes * 0.99,
+                         "close": closes, "volume": volumes}, index=idx)
+
+
+def test_volume_spike_alert():
+    from tracker.alerts import DEFAULTS, WOLUMEN, detect
+
+    frame = _frame([100.0] * 60, [1_000_000] * 59 + [4_000_000])
+    kinds = {a.kind for a in detect("X", "X", frame, DEFAULTS)}
+    assert WOLUMEN in kinds
+
+
+def test_price_move_scales_with_atr():
+    from tracker.alerts import DEFAULTS, RUCH, detect
+
+    quiet = _frame([100.0] * 59 + [106.0])  # 6% on a stock whose range is ~2%/day
+    kinds = {a.kind for a in detect("Q", "Q", quiet, DEFAULTS)}
+    assert RUCH in kinds
+
+
+def test_buy_the_dip_uses_threshold():
+    from tracker.alerts import DEFAULTS, OKAZJA, detect
+
+    import numpy as np
+    closes = list(np.linspace(100, 150, 200)) + list(np.linspace(150, 110, 60))  # ~27% off the high
+    frame = _frame(closes)
+    assert any(a.kind == OKAZJA for a in detect("D", "D", frame, DEFAULTS, dip_threshold=20))
+    assert not any(a.kind == OKAZJA for a in detect("D", "D", frame, DEFAULTS, dip_threshold=40)
+                   if "poniżej SMA200" not in a.detail)
+
+
+def test_quiet_stock_raises_nothing():
+    from tracker.alerts import DEFAULTS, detect
+
+    import numpy as np
+    rng = np.random.default_rng(1)
+    closes = 100 + np.cumsum(rng.normal(0, 0.3, 300))
+    frame = _frame(closes)
+    kinds = {a.kind for a in detect("Z", "Z", frame, DEFAULTS)}
+    assert "wolumen" not in kinds and "ruch" not in kinds
+
+
+def test_discord_chunking_respects_limit():
+    from tracker.notify import chunk
+
+    text = "\n".join(f"line {i} " + "x" * 80 for i in range(100))
+    parts = chunk(text, limit=500)
+    assert all(len(p) <= 500 for p in parts) and "".join(parts).count("line") == 100
+
+
+def test_alerts_command_reports_only_new_on_second_run(offline_config, tmp_path, capsys):
+    args = ["--config", str(offline_config), "--feed", "fixture", "--no-cache"]
+    assert main(args + ["alerts", "--no-smart", "--out-dir", str(tmp_path)]) == 0
+    first = capsys.readouterr().out
+    assert "nowych" in first and next(tmp_path.glob("alerts_*.json")).stat().st_size > 0
+    assert main(args + ["alerts", "--no-smart", "--out-dir", str(tmp_path)]) == 0
+    assert "0 nowych" in capsys.readouterr().out

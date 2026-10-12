@@ -44,3 +44,18 @@ signal_weights:
   fund_add: 1.0
   fund_trim: -1.0
   fund_exit: -2.0
+
+# Alerty (python -m tracker alerts). Listy sprawdzane co godzinę + portfel + obserwowane + okazje.
+alerts_universes:
+  - data/universe_humanoid_global.csv
+  - data/universe_surowce.csv
+  - data/universe_infrastruktura.csv
+  - data/universe_inne.csv
+  - data/etf.csv
+dip_list: data/okazje.csv
+alerts_state_file: .cache/tracker_alerts_seen.json
+alert_rules:
+  volume_multiple: 3.0       # wolumen dnia >= 3x średnia 20 sesji
+  move_atr_multiple: 2.5     # |zmiana dnia| >= 2,5x ATR(14)
+  dip_default_pct: 20        # próg okazji, gdy w okazje.csv brak wartości
+# Powiadomienia: export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."

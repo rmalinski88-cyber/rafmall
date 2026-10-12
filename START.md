@@ -55,6 +55,22 @@ Potem strona z kolumną „Insiderzy”:
 python -m screener --universe data/universe_humanoid_global.csv site --signals out/signals_$(date +%F).json
 ```
 
+## 5. Alerty na Discord
+
+```bash
+export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."   # z ustawień kanału → Integracje → Webhooki
+python -m tracker alerts --all --discord        # pierwszy raz: wszystko, żeby zobaczyć format
+python -m tracker alerts --discord              # potem: tylko nowości
+```
+
+Do crona co godzinę w godzinach sesji USA — przykład w README.
+
+## 6. Przegląd jakościowy (zasada: jakość, nie ilość)
+
+Po `validate` i pierwszej stronie z prawdziwymi danymi przejdź listy i wykreśl
+spółki, które nie bronią się po sprawdzeniu (trend, wyniki, aktualność tezy
+z reela). Wyślij mi tickery do wykreślenia albo zrób to sam w CSV.
+
 ## Co mi wysłać po uruchomieniu
 
 - wynik `validate` (błędy tickerów),
