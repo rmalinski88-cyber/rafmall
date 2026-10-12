@@ -1,6 +1,6 @@
 # setup/wtyczki
 
-- **Stan:** gotowe do scalenia
+- **Stan:** scalone
 - **Ostatnia zmiana:** 2026-10-12, chmura
 - **Cel:** podpiąć do repo wtyczki Claude Code z rolki matkowski.ai (po weryfikacji) i Task Observera jako skill.
 
