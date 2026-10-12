@@ -84,15 +84,20 @@ Wtyczki Claude Code dla tego repo opisuje `.claude/PLUGINS.md`.
 
 Workspace skilla jest w repo, więc obserwacje wędrują z gitem:
 
-W każdym środowisku (chmura i komputer) workspace to
-`<katalog repo>/.claude/task-observer-workspace`, gdzie katalog repo to wynik
-`git rev-parse --show-toplevel`. Ustal go raz na początku sesji i dalej używaj tylko tej
-ścieżki absolutnej. Jeśli wyliczona ścieżka nie istnieje, to błąd — zgłoś go, nie twórz
-drugiego workspace'u. Gdy repo zostało dołączone w trakcie sesji, protokół startowy
-wykonaj od razu po pojawieniu się tego pliku w kontekście.
+- na komputerze użytkownika (Windows): `C:\Users\RR\projekty\rafmall\.claude\task-observer-workspace`,
+  katalog nadrzędny repo: `C:\Users\RR\projekty`
+- sesje w chmurze i każdy inny klon: `<katalog repo>/.claude/task-observer-workspace`, gdzie
+  katalog repo to wynik `git rev-parse --show-toplevel`, a katalog nadrzędny repo to jego
+  rodzic. W chmurze ścieżka klonu bywa różna (`/home/user/rafmall`, `/home/claude/rafmall`),
+  więc nie wpisuj jej na sztywno. Ustal ją raz na początku sesji i dalej używaj tylko tej
+  ścieżki absolutnej.
+- Jeśli wyliczona ścieżka nie istnieje, to błąd — zgłoś go, nie twórz drugiego workspace'u.
+  Gdy repo zostało dołączone w trakcie sesji, protokół startowy wykonaj od razu po
+  pojawieniu się tego pliku w kontekście.
+
 
 Poniższy blok aktywacyjny pochodzi z `references/environments.md` skilla. `[ABSOLUTE PATH]`
-oznacza ścieżkę ustaloną wyżej, `[PROJECTS ROOT]` to katalog nadrzędny repo.
+oznacza ścieżkę roboczą z listy wyżej, `[PROJECTS ROOT]` odpowiadający jej katalog nadrzędny.
 
 ```text
 Before the first tool call of any session — and before writing or
