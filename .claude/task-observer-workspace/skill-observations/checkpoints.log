@@ -7,3 +7,4 @@
 2026-10-12 19:17 loaded task-observer — 1 open observations
 2026-10-12 19:18 [rafmall] session-start scan: files=6 parsed=6 principles=0
 2026-10-12T19:18:42Z session claude/stock-search-tool-pkr8rw: Session Start Protocol run after mid-session git pull brought CLAUDE.md+skill (probe ok, scan 3 files, review never, staged 0); 0006 written earlier by hand (id derived max(active,archive,floor)+1=6, floor bumped); 0003 extended with second instance
+2026-10-12 19:38 [rafmall] session-start scan: files=6 parsed=6 principles=0

@@ -79,7 +79,9 @@ market_rules:
   # Reguła "pullback" (przykład ARB 26 sie 2026): impuls z wolumenem przez EMA30,
   # korekta do rosnącej EMA bez jej przebicia, wejście na pierwszej świecy w górę.
   pullback_max_age: 15          # impuls nie starszy niż 15 sesji
-  pullback_pct: 0.03            # korekta liczy się, gdy dołek dojdzie do <= 3% nad EMA
+  pullback_pct: 0.03            # korekta liczy się, gdy dołek dojdzie do <= 3% nad EMA...
+  pullback_atr: 0.6             # ...albo do 0,6 x ATR(14) nad EMA, gdy instrument jest zmienny (krypto)
+  pullback_pct_max: 0.06        # ale nigdy luźniej niż 6%
   impulse_atr_multiple: 1.5     # świeca impulsu >= 1,5x średniego zakresu
   min_avg_dollar_volume: 2000000  # min. 2 mln USD obrotu dziennie
   min_price: 2.0

@@ -596,7 +596,7 @@ def _cmd_dump(ctx: Context) -> int:
             continue
         print(f"=== DUMP {symbol} BEGIN {len(prices)}")
         print(prices.to_csv(float_format="%.6g", index_label="date").rstrip())
-        print(f"=== DUMP {symbol} END")
+        print(f"=== DUMP {symbol} END", flush=True)
     return 0
 
 
@@ -631,9 +631,19 @@ def _cmd_replay(ctx: Context) -> int:
     if not hits:
         print("  Reguła nie odpaliła ani razu w tym oknie.")
         return 0
+    # The scanner remembers each setup by key (rule, symbol, impulse day) and
+    # alerts once; show the same thing here and count the later re-entries.
+    seen: dict[str, int] = {}
     for h in hits:
+        if h.key in seen:
+            seen[h.key] += 1
+            continue
+        seen[h.key] = 0
         print(f"  {h.day}  kurs {h.last_close:.4g}  {h.headline}")
         print(f"             {h.detail}")
+    repeats = sum(seen.values())
+    if repeats:
+        print(f"  (+{repeats} kolejne dni spełniające regułę dla tych samych impulsów — alert idzie raz)")
     return 0
 
 

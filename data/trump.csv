@@ -1,8 +1,19 @@
-ticker,name,note
-# „Portfel Trumpa" — instrumenty powiązane z Trumpem i jego otoczeniem, do karty na stronie.
-# Trump nie składa zgłoszeń o transakcjach (STOCK Act dotyczy Kongresu); jedyne twarde dane to
-# roczne oświadczenie majątkowe OGE (stan posiadania, PDF) i zgłoszenia SEC insiderów spółek.
-DJT,Trump Media & Technology Group,"Truth Social; insiderzy DJT w SEC Form 4"
-TRUMP-USD,Official Trump (memecoin),"zweryfikuj symbol Yahoo"
-WLFI-USD,World Liberty Financial,"token projektu rodziny Trumpa; zweryfikuj symbol Yahoo"
-BTC-USD,Bitcoin,"rezerwa strategiczna BTC (dekret 2025)"
+ticker,name,group,note
+# „Portfel Trumpa" — kopia Trump Portfolio Trackera z rafmall.ch/portfel (OGE Q1 2026, DoD/DoE/CHIPS).
+# Trump nie składa zgłoszeń o transakcjach (STOCK Act dotyczy Kongresu); twarde dane to roczne
+# oświadczenie majątkowe OGE i zgłoszenia SEC insiderów spółek. Kolumna group = kategoria z trackera.
+INTC,Intel Corporation,Rządowy · Chips,"Grant CHIPS Act 8,5 mld + pożyczka 11 mld"
+IBM,IBM,Rządowy · Chips,"Grant R&D 1,5 mld (Albany NanoTech)"
+GFS,GlobalFoundries,Chips Act,"Grant CHIPS Act 1,5 mld"
+QBTS,D-Wave Quantum,Quantum,"Kontrakty DoE / DARPA"
+RGTI,Rigetti Computing,Quantum,"Granty NIST / DoE"
+INFQ,Infleqtion,Quantum · DARPA,"Kontrakt DARPA / Air Force (OTC)"
+MP,MP Materials,Kontrakt DoD,"Kontrakt DoD 35 mln USD na magnesy ziem rzadkich"
+LAC,Lithium Americas,Pożyczka DoE,"Pożyczka DoE 2,26 mld USD (Thacker Pass)"
+TMQ,Trilogy Metals,Zainteresowanie DoD,"Zainteresowanie DoD (Upper Kobuk)"
+USAR,US Critical Minerals,Surowce krytyczne,"Strategia surowców krytycznych DoD (OTC)"
+PLTR,Palantir Technologies,Prywatny · AI/GovTech,"Zakup Q1: 42–630 tys. USD, przed pochwałą na Truth Social; sprzedaż 1,1–6,3 mln (luty 2026)"
+NVDA,Nvidia,Prywatny · AI,"Zakup Q1: 1–5 mln USD, tydzień przed umową Nvidia–Meta"
+AVGO,Broadcom,Prywatny · Chips,"Zakup Q1: >1 mln USD; łącznie >1,58 mln"
+ORCL,Oracle,Prywatny · Cloud,"Zakup Q1: wiele mln USD, przy negocjacjach TikTok–Oracle"
+MSFT,Microsoft,Prywatny · Cloud,"Zakup Q1: 1–5 mln USD (wyprzedaż software Q1 2026); sprzedaż 5–25 mln (10 lutego 2026)"

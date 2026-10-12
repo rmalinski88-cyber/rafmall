@@ -24,7 +24,9 @@ DEFAULTS = {
     "min_avg_dollar_volume": 2_000_000,  # liquidity floor, USD/day
     "min_price": 2.0,        # skip penny stocks
     "pullback_max_age": 15,  # impulse must be within this many bars
-    "pullback_pct": 0.03,    # low within 3% above the EMA (or under it) counts as a touch
+    "pullback_pct": 0.03,    # low within 3% above the EMA (or under it) counts as a touch...
+    "pullback_atr": 0.6,     # ...or within 0.6 x ATR(14) of it when the instrument is volatile (crypto),
+    "pullback_pct_max": 0.06,  # never looser than 6%
     "impulse_atr_multiple": 1.5,
 }
 
@@ -157,26 +159,34 @@ def ema_pullback_entry(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
     if impulse is None:
         return None
 
-    # correction: between impulse and today, closes stay above EMA, and some
-    # low came within `zone` of the EMA (the pullback itself)
-    seg = slice(impulse + 1, n - 1)
-    if not above[seg].all():
+    # after the impulse: closes never under the EMA (today included), a swing
+    # high, then a correction whose low comes back to the EMA zone.  The zone is
+    # `pullback_pct`, widened to a fraction of ATR for volatile instruments
+    # (ARB in Aug 2026 bottomed 3.2% over the EMA with 6% daily ranges).
+    if not above[impulse + 1:].all():
         return None
-    gap = (low.iloc[seg] / line.iloc[seg] - 1.0)
-    if gap.empty or float(gap.min()) > zone:
+    peak = impulse + int(np.argmax(close.iloc[impulse:n - 1].to_numpy()))
+    corr = slice(peak + 1, n)                       # the down leg, today included
+    gap = (low.iloc[corr] / line.iloc[corr] - 1.0)
+    if gap.empty:
+        return None
+    ema_last = float(line.iloc[-1])
+    atr_zone = float(atr_series.iloc[-1]) * cfg.get("pullback_atr", 0.0) / ema_last if ema_last > 0 else 0.0
+    zone_eff = min(max(zone, atr_zone), cfg.get("pullback_pct_max", zone))
+    if float(gap.min()) > zone_eff:
         return None  # never came back to the average: no correction, just a run-up
     # Report once: today must be the FIRST up-close since the pullback low.
-    low_idx = impulse + 1 + int(np.argmin(gap.to_numpy()))
+    low_idx = peak + 1 + int(np.argmin(gap.to_numpy()))
     for j in range(low_idx + 1, n - 1):
         if close.iloc[j] > close.iloc[j - 1]:
             return None
-    corr_vol = float(volume.iloc[seg].mean())
     impulse_vol = float(volume.iloc[impulse])
-    if corr_vol >= impulse_vol:
-        return None  # correction on higher volume than the impulse is distribution
+    leg_vol = float(volume.iloc[impulse:peak + 1].mean())
+    corr_vol = float(volume.iloc[peak + 1:low_idx + 1].mean())
+    if corr_vol >= leg_vol:
+        return None  # correction on more volume than the impulse leg is distribution
 
     last = float(close.iloc[-1])
-    ema_last = float(line.iloc[-1])
     impulse_day = pd.Timestamp(close.index[impulse]).date()
     impulse_ratio = impulse_vol / float(volume.iloc[impulse - win:impulse].mean())
     return Setup(
@@ -184,7 +194,7 @@ def ema_pullback_entry(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         ticker=ticker, name=name,
         headline=f"wejście po korekcie do EMA{cfg['ema_len']}: impuls {impulse_day} ({impulse_ratio:.1f}× wol.)",
         detail=f"kurs {last:.4g}, EMA {ema_last:.4g} ({last / ema_last - 1:+.1%}); "
-               f"najniżej w korekcie {float(gap.min()):+.1%} od EMA; wolumen korekty {corr_vol / impulse_vol:.0%} impulsu",
+               f"najniżej w korekcie {float(gap.min()):+.1%} od EMA; wolumen korekty {corr_vol / leg_vol:.0%} impulsu",
         strength=impulse_ratio * (1.0 + (n - 1 - impulse) / max_age),
         day=pd.Timestamp(close.index[-1]).date(),
         last_close=last,

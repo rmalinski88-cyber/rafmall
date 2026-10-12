@@ -27,7 +27,8 @@ class SamplesProvider(DataProvider):
         path = self.root / f"{ticker.upper()}.csv"
         if not path.exists():
             return self._fixture.get_prices(ticker, lookback_days)
-        frame = pd.read_csv(path, index_col=0, parse_dates=True)
+        frame = pd.read_csv(path, index_col=0)
+        frame.index = pd.to_datetime(frame.index)
         frame.columns = [c.lower() for c in frame.columns]
         frame = frame[PRICE_COLUMNS].sort_index()
         return frame.tail(int(lookback_days * 1.5))

@@ -497,7 +497,7 @@ def test_replay_command_runs_offline(offline_config, capsys):
     assert main(["--config", str(offline_config), "--feed", "fixture", "--no-cache",
                  "replay", "ARB", "--rule", "pullback", "--days", "60"]) == 0
     out = capsys.readouterr().out
-    assert "ARB-USD" in out and "reguła pullback" in out
+    assert "ARB11841-USD" in out and "reguła pullback" in out
 
 
 def test_pullback_fires_once_per_setup():

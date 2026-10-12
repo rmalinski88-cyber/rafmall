@@ -19,6 +19,10 @@ on:
         description: "Symbole dla zadania dump (po spacji)"
         type: string
         default: "ARB-USD NVDA"
+      klik:
+        description: "peek: teksty przycisków/zakładek do kliknięcia (rozdzielone |)"
+        type: string
+        default: ""
   schedule:
     # czas UTC; sesja USA to ok. 13:30-21:00 UTC
     - cron: "0 14-21 * * 1-5"   # alerts
@@ -44,6 +48,7 @@ jobs:
       INPUT: ${{ inputs.zadanie }}
       PEEK_URL: ${{ inputs.url }}
       DUMP_SYMBOLS: ${{ inputs.symbole }}
+      PEEK_CLICKS: ${{ inputs.klik }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
