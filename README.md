@@ -177,6 +177,49 @@ profiles:
 
 Wagi są względne — liczy się ich stosunek, nie suma.
 
+## Eksport do Obsidiana
+
+Screener potrafi zapisać wyniki prosto do sejfu Obsidian — jako notatki
+z właściwościami, które Obsidian (Bases, Dataview) umie sortować i filtrować.
+Działa tylko lokalnie, na komputerze, na którym leży sejf.
+
+```bash
+python -m screener run --obsidian-vault "C:\Users\RR\iCloudDrive\iCloud~md~obsidian\Rafmal1"
+```
+
+albo na stałe w `config/default.yml`:
+
+```yaml
+obsidian:
+  vault: C:\Users\RR\iCloudDrive\iCloud~md~obsidian\Rafmal1
+```
+
+Co powstaje w `01-Inwestycje/Screener robotyka/`:
+
+| Notatka | Ile | Co zawiera |
+|---|---|---|
+| `Screener robotyka humanoidalna Azja` | 1 (hub) | aktualny top, historia przebiegów, jak czytać wyniki |
+| `Przebiegi/Screener przebieg RRRR-MM-DD` | 1 na przebieg | pełny ranking, odrzucone, parametry |
+| `Spolki/<Nazwa spółki>` | 1 na spółkę | właściwości (`ticker`, `wynik_laczny`, `pozycja`, `status`…), wskaźniki, historia wyników |
+
+Przy pierwszym eksporcie do `START.md` trafia jeden link do hubu (w sekcji
+„Inwestycje", jeśli istnieje).
+
+Zasady, których eksport pilnuje:
+
+- **Nic nie jest usuwane ani odtwarzane z pamięci.** Wszystko, co generuje
+  screener, leży między znacznikami `<!-- screener:start -->` i
+  `<!-- screener:end -->`. Tekst poza nimi i własne właściwości (np. `moja_ocena`)
+  zostają nietknięte przy kolejnym przebiegu. Własne tagi są łączone z tagami screenera.
+- **Istniejąca notatka o spółce** (o tej samej nazwie, gdziekolwiek w sejfie poza
+  archiwum) jest aktualizowana w miejscu, zamiast tworzyć duplikat.
+- **Nazwy plików** bez polskich liter i bez `# [ ] ( ) { } , .`.
+- **Plik bez zmian nie jest zapisywany** — sejf w iCloud, każdy zapis to synchronizacja.
+- Notatka z uszkodzonymi właściwościami YAML jest pomijana i zgłaszana, nie nadpisywana.
+
+Szczegóły (podfolder, liczba wierszy w hubie, tagi, czy tworzyć notatki spółek)
+są w sekcji `obsidian:` konfiguracji.
+
 ## Dane
 
 Domyślnie **Yahoo Finance** przez `yfinance`: za darmo, bez klucza API,

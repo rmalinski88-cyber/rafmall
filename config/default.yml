@@ -14,6 +14,18 @@ cache_ttl_hours: 12
 # Domyślny profil scoringu (patrz sekcja "profiles" niżej).
 profile: growth
 
+# Eksport do sejfu Obsidian. Działa tylko lokalnie, na komputerze z sejfem.
+# Wpisz ścieżkę bez cudzysłowów albo w pojedynczych (w podwójnych "\U" to błąd YAML):
+#   vault: C:\Users\RR\iCloudDrive\iCloud~md~obsidian\Rafmal1
+# null = eksport wyłączony. Można też podać jednorazowo: run --obsidian-vault ŚCIEŻKA
+obsidian:
+  vault: null
+  folder: 01-Inwestycje/Screener robotyka   # podfolder sejfu na notatki screenera
+  top: 15                                   # ile wierszy rankingu w notatce hub
+  company_notes: true                       # notatka z właściwościami dla każdej spółki
+  update_start: true                        # dopisz link do hubu w START.md (raz)
+  tags: [inwestycje, akcje, screener, robotyka-humanoidalna]
+
 # Indeks odniesienia dla siły względnej, dobierany po sufiksie tickera.
 benchmarks:
   ".T": "^N225"      # Nikkei 225

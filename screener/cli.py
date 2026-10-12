@@ -10,7 +10,6 @@ from pathlib import Path
 import pandas as pd
 
 from .analysis.fundamental import compute_fundamental_metrics
-from .analysis.scoring import LABELS
 from .analysis.technical import compute_technical_metrics
 from .cache import Cache
 from .config import benchmark_for, load_config
@@ -19,6 +18,8 @@ from .providers import ProviderError, available_providers, get_provider
 from .report import format as fmt
 from .report.console import render_console
 from .report.html import render_html
+from .report.obsidian import ObsidianError, ObsidianSettings, export_obsidian
+from .report.views import FUNDAMENTAL_VIEW, TECHNICAL_VIEW, format_metric, label
 from .universe import load_universe
 from tracker.lists import load_symbols
 
@@ -60,6 +61,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--limit", type=int, help="ogranicz uniwersum do N pierwszych spółek (do testów)")
     run.add_argument("--out-dir", default="out", help="katalog na raporty (domyślnie: out)")
     run.add_argument("--no-html", action="store_true", help="nie generuj raportu HTML")
+    run.add_argument(
+        "--obsidian-vault",
+        help="ścieżka do sejfu Obsidian (nadpisuje obsidian.vault z konfiguracji)",
+    )
+    run.add_argument(
+        "--no-obsidian",
+        action="store_true",
+        help="nie zapisuj notatek do Obsidiana, nawet jeśli sejf jest skonfigurowany",
+    )
 
     validate = sub.add_parser(
         "validate",
@@ -144,6 +154,21 @@ def _cmd_run(args, config, provider) -> int:
         html_path = render_html(result, out_dir / f"report_{stamp}.html")
         print(f"HTML: {html_path}", file=sys.stderr)
 
+    return _export_to_obsidian(args, config, result)
+
+
+def _export_to_obsidian(args, config, result) -> int:
+    """Write the vault notes when a vault is configured; nothing to do otherwise."""
+    configured = args.obsidian_vault or (config.get("obsidian") or {}).get("vault")
+    if args.no_obsidian or not configured:
+        return 0
+    try:
+        settings = ObsidianSettings.from_config(config, args.obsidian_vault)
+        summary = export_obsidian(result, settings, config)
+    except ObsidianError as exc:
+        print(f"Obsidian: {exc}", file=sys.stderr)
+        return 1
+    print(summary.describe(), file=sys.stderr)
     return 0
 
 
@@ -268,46 +293,25 @@ def _cmd_show(args, config, provider) -> int:
     technical = compute_technical_metrics(prices, benchmark_close)
     fundamental = compute_fundamental_metrics(provider.get_fundamentals(ticker))
 
+    # The pipeline converts market cap to USD for the whole universe; a single
+    # lookup has to do it itself.
+    fx = provider.get_fx_to_usd(fundamental.get("currency") or "")
+    market_cap = fundamental.get("market_cap")
+    fundamental["market_cap_usd"] = (market_cap * fx) if (fx and market_cap) else None
+
     print(f"\n{fundamental.get('name') or ticker}  ({ticker})")
     print(f"{fundamental.get('sector') or '?'} · {fundamental.get('industry') or '?'} · "
           f"waluta {fundamental.get('currency') or '?'} · benchmark {benchmark_symbol or '—'}")
     print(f"Sesje w oknie: {technical.get('bars', 0)}  |  Ostatni kurs: {fmt.num(technical.get('last_close'), 2)}")
 
-    _print_block("FUNDAMENTY", fundamental, _FUNDAMENTAL_VIEW)
-    _print_block("TECHNIKA", technical, _TECHNICAL_VIEW)
+    _print_block("FUNDAMENTY", fundamental, FUNDAMENTAL_VIEW)
+    _print_block("TECHNIKA", technical, TECHNICAL_VIEW)
     print()
     return 0
-
-
-# (key, formatter) pairs; formatter names map onto screener.report.format.
-_FUNDAMENTAL_VIEW = [
-    ("market_cap", "raw"), ("revenue_growth", "pct"), ("earnings_growth", "pct"),
-    ("gross_margin", "pct"), ("operating_margin", "pct"), ("profit_margin", "pct"),
-    ("return_on_equity", "pct"), ("return_on_assets", "pct"), ("fcf_margin", "pct"),
-    ("debt_to_equity", "num"), ("current_ratio", "num"), ("net_cash_to_mcap", "pct"),
-    ("trailing_pe", "num"), ("forward_pe", "num"), ("price_to_sales", "num"),
-    ("price_to_book", "num"), ("ev_to_ebitda", "num"),
-]
-
-_TECHNICAL_VIEW = [
-    ("px_vs_sma50", "pct"), ("px_vs_sma200", "pct"), ("sma50_vs_sma200", "pct"),
-    ("rsi14", "num"), ("macd_hist_pct", "pct"),
-    ("ret_1m", "pct"), ("ret_3m", "pct"), ("ret_6m", "pct"), ("ret_12m", "pct"),
-    ("rs_3m", "pct"), ("rs_6m", "pct"),
-    ("dist_52w_high", "pct"), ("pos_52w_range", "pct"),
-    ("max_drawdown_12m", "pct"), ("atr_pct", "pct"),
-]
 
 
 def _print_block(title: str, values: dict, view: list[tuple[str, str]]) -> None:
     print(f"\n{title}")
     print("-" * 46)
     for key, kind in view:
-        value = values.get(key)
-        if kind == "pct":
-            text = fmt.pct(value, signed=key.startswith(("ret_", "rs_", "px_vs", "sma50_vs", "macd")))
-        elif kind == "num":
-            text = fmt.num(value, 2)
-        else:
-            text = f"{value:,.0f}".replace(",", " ") if isinstance(value, (int, float)) else fmt.DASH
-        print(f"  {LABELS.get(key, key):<28}{text:>16}")
+        print(f"  {label(key):<28}{format_metric(key, kind, values.get(key)):>16}")
