@@ -27,6 +27,9 @@ benchmarks:
   ".SW": "^SSMI"     # SMI (Szwajcaria)
   ".DE": "^GDAXI"    # DAX
   ".PA": "^FCHI"     # CAC 40
+  ".WA": "WIG20.WA"  # WIG20 (zweryfikuj symbol u Yahoo)
+  ".ST": "^OMX"      # OMX Stockholm 30
+  ".AX": "^AXJO"     # ASX 200
   # Tickery bez sufiksu to USA.
   default: "^GSPC"
 
