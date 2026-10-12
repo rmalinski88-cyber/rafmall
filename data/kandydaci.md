@@ -26,7 +26,7 @@ Waga na stronie maleje od środka piramidy w obie strony:
 |---|---|---|---|---|---|---|
 | 1 | Moog | MOG-A (jest też MOG-B) | komponenty | precyzyjne sterowanie ruchem, aktuatory, serwonapędy; 367,51 USD na 9 wrz (−10% w miesiąc) | reel „7 ETF-ów” (B. Kucia) nr 1; reel inwestycjezradkiem „3 spółki na boom humanoidów” | dodać |
 | 2 | Symbotic | SYM | integrator | roboty magazynowe; ekspozycja pośrednia; 42,62 USD na 9 wrz | reel „7 ETF-ów”; reel inwestycjezradkiem | w CSV |
-| 3 | Palantir | PLTR | platforma/AI? | oprogramowanie AI; związek z humanoidami słaby — raczej watchlista trackera | portfel finanse_na_sterydach | do decyzji |
+| 3 | Palantir | PLTR | platforma/AI? | oprogramowanie AI; związek z humanoidami słaby — raczej watchlista trackera | portfel finanse_na_sterydach | w `universe_infrastruktura.csv` |
 
 ## Warstwa 3 — półprzewodniki i AI (segment `platforma/AI`, średnia waga)
 
@@ -52,16 +52,16 @@ Teza ze slajdów: centra danych pochłaniają prąd, budowa sieci trwa lata, bra
 
 | # | Spółka | Ticker | Co robi | Źródło | Status |
 |---|---|---|---|---|---|
-| 1 | Vertiv | VRT | chłodzenie i zasilanie datacenter | slajd „AI w praktyce”, warstwa 2 | do decyzji |
-| 2 | Vistra | VST | energetyka (w tym jądrowa) | j.w. | do decyzji |
-| 3 | GE Vernova | GEV | turbiny, sieci, transformatory | j.w. | do decyzji |
-| 4 | Quanta Services | PWR | budowa sieci przesyłowych | j.w. | do decyzji |
+| 1 | Vertiv | VRT | chłodzenie i zasilanie datacenter | slajd „AI w praktyce”, warstwa 2 | w `universe_infrastruktura.csv` |
+| 2 | Vistra | VST | energetyka (w tym jądrowa) | j.w. | w `universe_infrastruktura.csv` |
+| 3 | GE Vernova | GEV | turbiny, sieci, transformatory | j.w. | w `universe_infrastruktura.csv` |
+| 4 | Quanta Services | PWR | budowa sieci przesyłowych | j.w. | w `universe_infrastruktura.csv` |
 | 5 | Cameco | CCJ | uran — paliwo dla energetyki jądrowej | j.w. | w `universe_surowce.csv` |
-| 6 | Constellation Energy | CEG | największa flota jądrowa w USA; umowy z hyperscalerami | karuzela Neuralka „AI pożera energię”, #1 | do decyzji |
-| 7 | NRG Energy | NRG | elektrownie gazowe szczytowe, sprzedaż detaliczna (Teksas/ERCOT) | Neuralka #2 | do decyzji |
-| 8 | Talen Energy | TLN | elektrownia jądrowa Susquehanna obok kampusu datacenter Amazona | Neuralka #3 | do decyzji |
-| 9 | NextEra Energy | NEE | OZE + magazyny energii + regulowana spółka na Florydzie | Neuralka #5 | do decyzji |
-| 10 | Eaton | ETN | rozdzielnice, zasilanie awaryjne, dystrybucja energii w datacenter | Neuralka #6 | do decyzji |
+| 6 | Constellation Energy | CEG | największa flota jądrowa w USA; umowy z hyperscalerami | karuzela Neuralka „AI pożera energię”, #1 | w `universe_infrastruktura.csv` |
+| 7 | NRG Energy | NRG | elektrownie gazowe szczytowe, sprzedaż detaliczna (Teksas/ERCOT) | Neuralka #2 | w `universe_infrastruktura.csv` |
+| 8 | Talen Energy | TLN | elektrownia jądrowa Susquehanna obok kampusu datacenter Amazona | Neuralka #3 | w `universe_infrastruktura.csv` |
+| 9 | NextEra Energy | NEE | OZE + magazyny energii + regulowana spółka na Florydzie | Neuralka #5 | w `universe_infrastruktura.csv` |
+| 10 | Eaton | ETN | rozdzielnice, zasilanie awaryjne, dystrybucja energii w datacenter | Neuralka #6 | w `universe_infrastruktura.csv` |
 
 GE Vernova (GEV) występuje u obu źródeł (Portfel Tradera i Neuralka #4). Karuzela Neuralki miała 8 slajdów — brakuje #7 i #8.
 
@@ -149,9 +149,9 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 ## Pytania do Rafała
 
 - [x] Screen z „1” (pierwsza paczka): tak, Moog — potwierdzone drugim reelem
-- [ ] Warstwa 2 „infrastruktura fizyczna” (Vertiv, Vistra, GE Vernova, Quanta): osobny segment na stronie, czy pominąć?
-- [ ] Sprzęt do produkcji chipów (ASML, LRCX, AMAT, KLAC) i pamięci (MU, MRVL): do segmentu platforma/AI, czy to już za daleko?
-- [ ] ETF-y na złoto/srebro/uran: pokazywać na stronie w sekcji surowce, czy tylko miedź i ziemie rzadkie?
+- [x] Warstwa 2: domyślnie NA STRONIE jako sekcja „Energia” (do odwołania)
+- [x] Sprzęt do chipów i pamięci: domyślnie W platforma/AI jako medium (do odwołania)
+- [x] ETF-y złoto/srebro/uran: domyślnie NA STRONIE w grupie „makro” (do odwołania)
 - [ ] Czy rafmall.ch jest nadal publikowana przez Lovable?
 - [ ] HTML strony z Lovable (do dopasowania wyglądu)
 - [ ] Które spółki są w portfelu, a które tylko obserwowane?
@@ -169,8 +169,8 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 ## Do zrobienia w kodzie (mogę z telefonu)
 
 - [x] lista spółek surowcowych jako osobny plik `data/universe_surowce.csv`
-- [ ] dopisać warstwę 3 do `universe_humanoid_global.csv` (po decyzji Rafała)
-- [ ] sekcja „ETF-y” na stronie: kurs, zwroty, trend, bez C/Z i marż
-- [ ] sekcja „Surowce” na stronie: osobny ranking, na końcu, z adnotacją o mniejszej wadze
+- [x] dopisać warstwę 3 do `universe_humanoid_global.csv` (Moog, AVGO, MU, MRVL, ASML, LRCX, AMAT, KLAC, INTC jako medium)
+- [x] sekcja „ETF-y” na stronie (`data/etf.csv`)
+- [x] sekcje „Surowce” i „Energia” na stronie: osobne rankingi (`site --extra`)
 - [ ] KOID jako dodatkowy benchmark siły względnej dla spółek z listy
 - [ ] porównanie „humanoidy vs klasy aktywów” (KOID/HUMN vs SPY, QQQ, DBC, GLD) na stronie

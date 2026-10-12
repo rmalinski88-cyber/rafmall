@@ -168,6 +168,7 @@
     <div class="chips" id="chips">
       <button class="chip" type="button" data-seg="" aria-pressed="true">Wszystko</button>
       {% for seg in segments %}<button class="chip" type="button" data-seg="{{ seg.key }}" aria-pressed="false">{{ seg.label }}</button>{% endfor %}
+      {% for seg in extra %}<button class="chip" type="button" data-seg="{{ seg.key }}" aria-pressed="false">{{ seg.label }}</button>{% endfor %}
     </div>
   </div>
 
@@ -208,6 +209,73 @@
     </div>
   </section>
   {% endfor %}
+
+  {% for seg in extra %}
+  <section class="card seg extra" data-seg="{{ seg.key }}">
+    <div class="seg-head"><h2>{{ seg.label }}</h2><span class="cnt" data-count></span><span class="pill">tło — osobny ranking</span></div>
+    <p class="note">{{ seg.blurb }}</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Spółka</th><th class="left">Rynek</th><th class="left">Segment</th><th>Wynik</th><th>Kurs</th><th>Kapitalizacja</th>
+            <th>1M</th><th>12M</th><th>vs SMA200</th><th>RSI</th><th>C/Z</th><th class="left">12M</th><th class="left">Dlaczego na liście</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in seg.rows %}
+          <tr data-ticker="{{ r.ticker }}" data-market="{{ r.market }}" data-text="{{ (r.name ~ ' ' ~ r.ticker ~ ' ' ~ r.notes ~ ' ' ~ r.market ~ ' ' ~ r.segment)|lower }}">
+            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub">{{ r.ticker }}{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
+            <td class="left">{{ r.market }}</td>
+            <td class="left"><span class="pill">{{ r.segment }}</span></td>
+            <td class="num"><b>{{ r.score }}</b>{% if r.excluded %}<div class="sub">{{ r.excluded }}</div>{% endif %}</td>
+            <td class="num">{{ r.last_close }} <span class="sub">{{ r.currency }}</span></td>
+            <td class="num">{{ r.market_cap }}</td>
+            <td class="num {{ 'pos' if r.ret_1m.startswith('+') else 'neg' if r.ret_1m.startswith('-') else '' }}">{{ r.ret_1m }}</td>
+            <td class="num {{ 'pos' if r.ret_12m.startswith('+') else 'neg' if r.ret_12m.startswith('-') else '' }}">{{ r.ret_12m }}</td>
+            <td class="num">{{ r.px_vs_sma200 }}</td>
+            <td class="num">{{ r.rsi }}</td>
+            <td class="num">{{ r.pe }}</td>
+            <td class="left">{{ r.spark }}</td>
+            <td class="notes">{{ r.notes }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+
+  {% if etfs %}
+  <section class="card" id="etf">
+    <h2>ETF-y</h2>
+    <p class="note">Gotowe koszyki na ten sam temat. Bez wyniku fundamentalnego — fundusz nie ma marży ani C/Z. Linia = ostatnie 12 miesięcy.</p>
+    {% for g in etfs %}
+    <h3 style="margin: 18px 0 6px; font-size: 0.95rem;">{{ g.label }}</h3>
+    <div class="scroll"><table>
+      <thead><tr><th class="left">ETF</th><th>Kurs</th><th class="left">Trend</th><th>1M</th><th>3M</th><th>12M</th><th>RSI</th><th>vs SMA200</th><th class="left">12M</th><th class="left">Uwagi</th></tr></thead>
+      <tbody>
+      {% for e in g.rows %}
+        {% if e.error %}
+        <tr><td class="left"><span class="tick-name">{{ e.ticker }}</span> <span class="sub">{{ e.name }}</span></td><td class="left" colspan="9"><span class="empty">{{ e.error }}</span></td></tr>
+        {% else %}
+        <tr>
+          <td class="left"><div class="tick-name">{{ e.ticker }}</div><div class="sub">{{ e.name }}</div></td>
+          <td class="num">{{ e.last }}</td><td class="left">{{ e.trend }}</td>
+          <td class="num {{ 'pos' if e.ret_1m.startswith('+') else 'neg' if e.ret_1m.startswith('-') else '' }}">{{ e.ret_1m }}</td>
+          <td class="num {{ 'pos' if e.ret_3m.startswith('+') else 'neg' if e.ret_3m.startswith('-') else '' }}">{{ e.ret_3m }}</td>
+          <td class="num {{ 'pos' if e.ret_12m.startswith('+') else 'neg' if e.ret_12m.startswith('-') else '' }}">{{ e.ret_12m }}</td>
+          <td class="num">{{ e.rsi }}</td><td class="num">{{ e.sma200 }}</td>
+          <td class="left">{{ e.spark }}</td>
+          <td class="notes">{{ e.notes }}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% endfor %}
+  </section>
+  {% endif %}
 
   <p class="disclaimer">
     <b>To nie jest rekomendacja inwestycyjna.</b> Lista jest kuratorowana ręcznie, a dane pochodzą z darmowych

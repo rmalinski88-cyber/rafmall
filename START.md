@@ -17,6 +17,9 @@ python -m pytest tests -q                              # oczekiwane: wszystkie t
 
 ```bash
 python -m screener --universe data/universe_humanoid_global.csv validate
+python -m screener --universe data/universe_surowce.csv validate
+python -m screener --universe data/universe_infrastruktura.csv validate
+python -m screener --universe data/etf.csv validate
 ```
 
 Wiersze ze statusem `BŁĄD — brak notowań` to tickery, których Yahoo nie zna.
@@ -26,10 +29,13 @@ a ja je poprawię. Spółki z `confidence=medium` sprawdź w pierwszej kolejnoś
 ## 3. Strona z robotyką humanoidalną
 
 ```bash
-python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
+python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html \
+  --extra "Surowce=data/universe_surowce.csv" --extra "Energia=data/universe_infrastruktura.csv"
 ```
 
 Otwórz `out/site/roboty.html` w przeglądarce. To gotowy plik do wgrania na rafmall.ch.
+ETF-y z `data/etf.csv` dołączają się same. Pierwsze uruchomienie pobiera ~110 symboli z Yahoo,
+może potrwać kilka minut; kolejne idą z cache.
 
 ## 4. Tracker transakcji (opcjonalnie)
 

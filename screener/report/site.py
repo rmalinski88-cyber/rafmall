@@ -29,21 +29,66 @@ SEGMENTS = [
 ]
 
 
+ETF_GROUPS = [
+    ("humanoidy", "Humanoidy"), ("robotyka", "Robotyka i automatyka"), ("chipy", "Półprzewodniki"),
+    ("surowce", "Surowce krytyczne"), ("makro", "Metale i energia (makro)"), ("benchmark", "Punkty odniesienia"),
+]
+
+
 def render_site(result: ScreenResult, output_path: str | Path, signals: dict | None = None,
-                title: str = "Robotyka humanoidalna — spółki i dostawcy podzespołów") -> Path:
+                title: str = "Robotyka humanoidalna — spółki i dostawcy podzespołów",
+                extra: list[tuple[str, str, ScreenResult]] | None = None,
+                etfs: list[dict] | None = None) -> Path:
+    """``extra`` is ``[(heading, blurb, result), ...]`` - universes ranked on their own
+    (commodities, energy) shown after the main list.  ``etfs`` are quote cards."""
     env = Environment(loader=FileSystemLoader(TEMPLATE_DIR), autoescape=select_autoescape(["html"]))
-    html = env.get_template("site.html").render(**build_site_context(result, signals, title))
+    context = build_site_context(result, signals, title)
+    context["extra"] = [
+        {"key": f"extra{i}", "label": heading, "blurb": blurb,
+         "rows": [_row(r, res, None) for r in _ordered(res).to_dict("records")]}
+        for i, (heading, blurb, res) in enumerate(extra or [])
+    ]
+    context["etfs"] = _etf_groups(etfs or [])
+    html = env.get_template("site.html").render(**context)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html, encoding="utf-8")
     return output_path
 
 
-def build_site_context(result: ScreenResult, signals: dict | None, title: str) -> dict:
+def _ordered(result: ScreenResult):
     import pandas as pd
 
     frame = pd.concat([result.ranked, result.rejected], ignore_index=True, sort=False)
-    frame = frame.sort_values("composite_score", ascending=False, na_position="last")
+    if "composite_score" not in frame.columns:
+        frame["composite_score"] = float("nan")
+    return frame.sort_values("composite_score", ascending=False, na_position="last")
+
+
+def _etf_groups(cards: list[dict]) -> list[dict]:
+    groups = []
+    for key, label in ETF_GROUPS:
+        rows = []
+        for c in cards:
+            if c.get("group") != key:
+                continue
+            closes = c.get("closes")
+            rows.append({
+                "ticker": c["symbol"], "name": c.get("label") or c.get("name") or c["symbol"],
+                "notes": c.get("notes") or "", "error": c.get("error"),
+                "last": fmt.num(c.get("last_close"), 2), "trend": c.get("trend") or "",
+                "ret_1m": fmt.pct(c.get("ret_1m"), signed=True), "ret_3m": fmt.pct(c.get("ret_3m"), signed=True),
+                "ret_12m": fmt.pct(c.get("ret_12m"), signed=True), "rsi": fmt.num(c.get("rsi14"), 0),
+                "sma200": fmt.pct(c.get("px_vs_sma200"), signed=True),
+                "spark": Markup(sparkline(closes.tail(252) if closes is not None else None)),
+            })
+        if rows:
+            groups.append({"key": key, "label": label, "rows": rows})
+    return groups
+
+
+def build_site_context(result: ScreenResult, signals: dict | None, title: str) -> dict:
+    frame = _ordered(result)
     by_ticker = {s["ticker"]: s for s in (signals or {}).get("signals", [])}
 
     rows = [_row(record, result, by_ticker.get(record["ticker"])) for record in frame.to_dict("records")]

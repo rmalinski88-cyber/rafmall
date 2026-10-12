@@ -229,3 +229,17 @@ def test_us_and_european_benchmarks(config):
     assert benchmark_for("ABBN.SW", config) == "^SSMI"
     assert benchmark_for("SIE.DE", config) == "^GDAXI"
     assert benchmark_for("6324.T", config) == "^N225"
+
+
+def test_site_extra_universes_and_etfs(tmp_path, config):
+    from screener.report.site import render_site
+
+    main = run_screen(load_universe("data/universe_humanoid_global.csv").head(6), FixtureProvider(), config)
+    commodities = run_screen(load_universe("data/universe_surowce.csv").head(4), FixtureProvider(), config)
+    etfs = [{"symbol": "KOID", "group": "humanoidy", "label": "KraneShares Humanoid", "notes": "",
+             "last_close": 35.0, "ret_1m": 0.05, "trend": "wzrostowy", "closes": None},
+            {"symbol": "XXXX", "group": "makro", "label": "Broken", "error": "brak notowań"}]
+    html = render_site(main, tmp_path / "s.html", extra=[("Surowce", "tło", commodities)], etfs=etfs).read_text(encoding="utf-8")
+    assert "Surowce" in html and "osobny ranking" in html
+    assert "KOID" in html and "brak notowań" in html
+    assert 'data-seg="extra0"' in html

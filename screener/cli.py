@@ -20,6 +20,7 @@ from .report import format as fmt
 from .report.console import render_console
 from .report.html import render_html
 from .universe import load_universe
+from tracker.lists import load_symbols
 
 # Columns written to CSV, in this order. Everything else stays in the frame
 # for the HTML report but would only clutter a spreadsheet.
@@ -72,6 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     site.add_argument("--out", default="out/site/roboty.html", help="docelowy plik HTML")
     site.add_argument("--signals", help="plik signals_*.json z trackera - dołoży kolumnę Insiderzy")
     site.add_argument("--title", default="Robotyka humanoidalna — spółki i dostawcy podzespołów")
+    site.add_argument("--extra", action="append", default=[], metavar="TYTUŁ=PLIK.csv",
+                      help="dodatkowa lista z osobnym rankingiem, np. 'Surowce=data/universe_surowce.csv' (można podać kilka razy)")
+    site.add_argument("--etfs", metavar="PLIK.csv", help="lista ETF-ów (ticker,name,group,notes); domyślnie data/etf.csv jeśli istnieje")
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
@@ -161,11 +165,45 @@ def _cmd_site(args, config, provider) -> int:
     if args.signals:
         signals = json.loads(Path(args.signals).read_text(encoding="utf-8"))
 
-    path = render_site(result, args.out, signals=signals, title=args.title)
+    extra = []
+    for spec in args.extra:
+        heading, _, csv_path = spec.partition("=")
+        if not csv_path:
+            raise ValueError(f"--extra oczekuje formatu TYTUŁ=PLIK.csv, dostał: {spec!r}")
+        extra_universe = load_universe(csv_path)
+        print(f"  + {heading}: {len(extra_universe)} spółek", file=sys.stderr)
+        extra_result = run_screen(extra_universe, provider, config, args.profile)
+        result.warnings.extend(extra_result.warnings)
+        extra.append((heading.strip(), _EXTRA_BLURBS.get(heading.strip().lower(), ""), extra_result))
+
+    etf_path = args.etfs or ("data/etf.csv" if Path("data/etf.csv").exists() else None)
+    etfs = _etf_cards(etf_path, provider, config) if etf_path else []
+
+    path = render_site(result, args.out, signals=signals, title=args.title, extra=extra, etfs=etfs)
     print(f"Strona: {path}", file=sys.stderr)
     for warning in result.warnings:
         print(f"  ! {warning}", file=sys.stderr)
     return 0
+
+
+_EXTRA_BLURBS = {
+    "surowce": "Bez miedzi (silniki, okablowanie) i metali ziem rzadkich (magnesy w aktuatorach) humanoid nie powstanie. "
+               "Złoto, srebro i uran to tło makro, nie łańcuch dostaw robota. Ranking liczony osobno — te spółki nie wpływają na wyniki humanoidów.",
+    "energia": "Modele sterujące robotami uczą się w centrach danych, a te potrzebują prądu, chłodzenia i transformatorów. "
+               "Ekspozycja pośrednia; ranking liczony osobno.",
+}
+
+
+def _etf_cards(path: str, provider, config: dict) -> list[dict]:
+    """Quote cards for every ETF in the CSV, in file order."""
+    from tracker.instruments import describe
+
+    cards = []
+    for entry in load_symbols(path):
+        card = describe(entry["ticker"], provider, config)
+        card.update({"group": entry.get("group", ""), "label": entry.get("name", ""), "notes": entry.get("notes", "")})
+        cards.append(card)
+    return cards
 
 
 def _write_csv(ranked: pd.DataFrame, path: Path) -> None:
