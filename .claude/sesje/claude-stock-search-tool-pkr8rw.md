@@ -17,9 +17,10 @@
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego
-  https://rmalinski88-cyber.github.io/rafmall/ zwraca 404; wpisać sekrety `SEC_USER_AGENT`, `DISCORD_WEBHOOK_URL`.
-- Ta sesja: dokończyć `data/trump.csv` (peek z klikaniem zakładek), przepisać `START.md`/`README.md` na wersję online,
-  scalić do `main` (uruchamia `pages.yml`).
+  https://rmalinski88-cyber.github.io/rafmall/ zwraca 404; wpisać sekrety `SEC_USER_AGENT`, `DISCORD_WEBHOOK_URL`;
+  wkleić prompt z `START.md` §4 do Lovable (podstrona /narzedzie z iframe + kursy Portfela Trumpa z `api/instruments.json`).
+- Scalone do `main` 2026-10-12 (39c9ee4); `pages.yml` buduje stronę po każdym pushu do `main` i 2× dziennie.
+- Potem: ocena szumu alertów po tygodniu przebiegów (progi w `config/tracker.yml`), Pine Script do sprawdzenia w Pine Editorze.
 
 ## Uwaga dla innych sesji
 - `screener/report/obsidian.py` i `screener/report/views.py` są w toku — nie ruszać bez potrzeby.
