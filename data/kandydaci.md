@@ -39,7 +39,7 @@ Film idzie przez robota element po elemencie i przy każdym wymienia dostawców 
 | Łożyska | Schaeffler (SHA0.DE, w CSV), SKF (SKF-B.ST) **NOWA**, Timken (TKR) **NOWA** | NSK (j.w.) | cały segment łożysk był pominięty — dodany |
 | Silniki, napędy, aktuatory | Regal Rexnord (RRX, w CSV), Moog (MOG-A, w CSV) | Inovance 汇川 (300124.SZ, w CSV, „chiński gigant automatyki i napędów bezszczotkowych”); Leili 雷利 (Chiny, ticker nieznany) | — |
 | Magnesy ziem rzadkich | MP Materials (MP, w CSV, „perełka”) | JL MAG 金力永磁 (300660.SZ) **NOWA** | — |
-| Baterie | — | BYD (1211.HK) **NOWA**; solid state w kontekście | — |
+| Baterie | QuantumScape (QS) **NOWA**, „Ampus Technologies” (?), Tesla | BYD (1211.HK) **NOWA**, „potężna baza R&D z pilotażowymi liniami solid state” | „Ampus Technologies” — nie znam takiej spółki, możliwy błąd lektora; sprawdzić |
 
 Nieznane tickery do sprawdzenia na komputerze: Best Drive, Jinxu, Leili (chińskie spółki z prowadnic i silników — mogą być notowane w Szanghaju/Shenzhen albo prywatne).
 
@@ -147,6 +147,10 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 
 ## Notatki makro (kontekst do opisu na stronie)
 
+- **Rynek humanoidów** (The Business Research Company, Humanoid Robot Market Report 2026): 5,44 mld USD (2025) → 8,32 mld (2026) → 39 mld (2030), CAGR 2026–2030 47,1%. Film: nawet konserwatywne instytucje dają 41–48% rocznie. Do nagłówka strony, z podaniem źródła.
+- **Cykl hype → rzeczywistość → ból → smart money → odbicie** (grafika z reela, przykład NVIDIA i „SpaceX”): typowy przebieg po IPO/hypie: 1–3 mies. hype, 3–9 spadek, 9–18 dno, 12–24 akumulacja. Przydatne jako komentarz do spółek humanoidalnych po debiutach (np. UBTech, Horizon).
+- **Jensen Huang** (tweet F. Curzio): CEO NVIDIA zachęca do spółek energii zrównoważonej — potwierdza tezę warstwy 2.
+
 - **BofA Fund Manager Survey, wrz 2026**: najbardziej zatłoczona pozycja „long global semiconductors” (53%). Nisza humanoidów jest mniej wyeksploatowana niż chipy.
 - **Surowce vs akcje**: BCOM/SPX najniżej od lat 90.; Fidelity i Incrementum pokazują początek nowej hossy surowcowej. Portfel Tradera: deglobalizacja, zbrojenia, inflacja.
 - **2026 YTD** (Bilello): surowce DBC +47,3%, US Value +20,9%, Nasdaq +17,7%, S&P +12,6%, złoto +1,2%, obligacje na minusie, BTC −7,6%.
@@ -154,6 +158,9 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 - **Rząd USA** inwestuje bezpośrednio w spółki (Intel 8,9 mld, Korea Zinc 1,6 mld, USA Rare Earth 1,6 mld, MP Materials 400 mln) — państwowe wsparcie dla łańcucha dostaw ziem rzadkich i chipów.
 
 ## Portfele twórców (tylko jako sygnał, co jest popularne)
+
+- **finanse_na_sterydach**, „3 spółki, które obserwuję w sierpniu”: SoFi (SOFI, fintech), Zeta Global (ZETA, martech AI), CoreWeave (CRWV, chmura GPU). Tylko CoreWeave ma związek z AI-infrastrukturą; SoFi i Zeta nie dotyczą naszego tematu — pomijam.
+- **finanse_na_sterydach**, story po wynikach NVIDIA: NVDA, Nebius (NBIS, chmura GPU), Sandisk (SNDK, pamięci), Micron (MU). Nebius i Sandisk → kandydaci do warstwy 3 jako `medium`, tylko jeśli chcemy rozszerzać o pamięci/chmurę GPU — na razie nie dodaję.
 
 - **inwestycjezradkiem** „3 spółki, którymi rozegrałbym boom na humanoidy”: Symbotic, MP Materials, Moog. Ten sam zestaw co u B. Kuci — popularna narracja, nie niezależne potwierdzenie.
 
