@@ -1,5 +1,8 @@
 # Briefing — uruchomienie na komputerze
 
+> Zasady wspólnej pracy sesji Claude na tym repo (gałęzie, pliki wspólne, testy
+> przed pushem): **`CLAUDE.md`**. Każda sesja — także Cowork — czyta go na starcie.
+
 Stan: wszystko zbudowane i przetestowane offline (143 testy). Nic nie było
 jeszcze uruchomione na prawdziwych danych, bo telefon nie ma dostępu do Yahoo,
 SEC ani TradingView. Pierwsze uruchomienie na komputerze to jedna komenda,
