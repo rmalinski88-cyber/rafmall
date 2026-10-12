@@ -1,7 +1,7 @@
 ---
 id: 2
 title: "Hook SessionStart Task Observera jest opisany jako działający, a w repo wpisano go tylko do .claude/settings.proposed.json"
-status: open
+status: actioned
 type: internal
 skill: []
 proposes_skill: []
@@ -11,8 +11,8 @@ area: "aktywacja Task Observera — hook SessionStart i jego opis w dokumentacji
 date: 2026-10-12
 session_context: "Podłączenie repo rafmall do działającej sesji chmurowej i pierwszy Session Start Protocol w tym klonie; stan repo z commita ece33d6 na gałęzi domyślnej"
 parked_until:
-resolved:
-resolution:
+resolved: 2026-10-12
+resolution: "Wariant (a) na polecenie użytkownika: .claude/settings.proposed.json zastosowany jako .claude/settings.json (git mv -f, gałąź setup/wtyczki) — sekcja hooks.SessionStart jest teraz w aktywnym pliku, plik proponowany usunięty, zdublowany wpis task-observer@one-skill-to-rule-them-all wypadł. Opis w .claude/PLUGINS.md jest odtąd zgodny ze stanem. Działanie hooka w nowej sesji ma potwierdzić sesja na komputerze użytkownika."
 reference:
 commands_verified: "grep -c hooks .claude/settings.json — run, zwróciło 0; grep -c hooks .claude/settings.proposed.json — run, zwróciło 3; grep -n -i proposed .claude/PLUGINS.md README.md START.md CLAUDE.md — run, brak trafień"
 ---
