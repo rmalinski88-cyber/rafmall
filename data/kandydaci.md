@@ -24,8 +24,8 @@ Waga na stronie maleje od środka piramidy w obie strony:
 
 | # | Spółka | Ticker (do sprawdzenia) | Segment | Dlaczego interesuje | Źródło | Status |
 |---|---|---|---|---|---|---|
-| 1 | Moog | MOG-A (jest też MOG-B) | komponenty | precyzyjne sterowanie ruchem, aktuatory, serwonapędy | reel „7 ETF-ów” (B. Kucia), nr 1 | dodać |
-| 2 | Symbotic | SYM | integrator | roboty magazynowe; ekspozycja pośrednia | reel „7 ETF-ów” | w CSV |
+| 1 | Moog | MOG-A (jest też MOG-B) | komponenty | precyzyjne sterowanie ruchem, aktuatory, serwonapędy; 367,51 USD na 9 wrz (−10% w miesiąc) | reel „7 ETF-ów” (B. Kucia) nr 1; reel inwestycjezradkiem „3 spółki na boom humanoidów” | dodać |
+| 2 | Symbotic | SYM | integrator | roboty magazynowe; ekspozycja pośrednia; 42,62 USD na 9 wrz | reel „7 ETF-ów”; reel inwestycjezradkiem | w CSV |
 | 3 | Palantir | PLTR | platforma/AI? | oprogramowanie AI; związek z humanoidami słaby — raczej watchlista trackera | portfel finanse_na_sterydach | do decyzji |
 
 ## Warstwa 3 — półprzewodniki i AI (segment `platforma/AI`, średnia waga)
@@ -57,6 +57,13 @@ Teza ze slajdów: centra danych pochłaniają prąd, budowa sieci trwa lata, bra
 | 3 | GE Vernova | GEV | turbiny, sieci, transformatory | j.w. | do decyzji |
 | 4 | Quanta Services | PWR | budowa sieci przesyłowych | j.w. | do decyzji |
 | 5 | Cameco | CCJ | uran — paliwo dla energetyki jądrowej | j.w. | w `universe_surowce.csv` |
+| 6 | Constellation Energy | CEG | największa flota jądrowa w USA; umowy z hyperscalerami | karuzela Neuralka „AI pożera energię”, #1 | do decyzji |
+| 7 | NRG Energy | NRG | elektrownie gazowe szczytowe, sprzedaż detaliczna (Teksas/ERCOT) | Neuralka #2 | do decyzji |
+| 8 | Talen Energy | TLN | elektrownia jądrowa Susquehanna obok kampusu datacenter Amazona | Neuralka #3 | do decyzji |
+| 9 | NextEra Energy | NEE | OZE + magazyny energii + regulowana spółka na Florydzie | Neuralka #5 | do decyzji |
+| 10 | Eaton | ETN | rozdzielnice, zasilanie awaryjne, dystrybucja energii w datacenter | Neuralka #6 | do decyzji |
+
+GE Vernova (GEV) występuje u obu źródeł (Portfel Tradera i Neuralka #4). Karuzela Neuralki miała 8 slajdów — brakuje #7 i #8.
 
 ## Warstwa 1 — surowce krytyczne (`universe_surowce.csv`, osobny ranking, mniejsza waga)
 
@@ -69,7 +76,7 @@ Slajd EUISS: Chiny dominują w wydobyciu ziem rzadkich (ok. 70% światowego wydo
 | 2 | Southern Copper | SCCO | miedź | | Portfel Tradera | w CSV |
 | 3 | KGHM Polska Miedź | KGH.WA | miedź, srebro | GPW | Portfel Tradera | w CSV |
 | 4 | Boliden | BOL.ST | miedź, cynk | Sztokholm | Portfel Tradera | w CSV |
-| 5 | MP Materials | MP | ziemie rzadkie | 400 mln USD od rządu USA; także na liście głównej | CATO, „AI w praktyce” | w CSV |
+| 5 | MP Materials | MP | ziemie rzadkie | 400 mln USD od rządu USA; także na liście głównej; 54,30 USD na 9 wrz | CATO, „AI w praktyce”, reel inwestycjezradkiem | w CSV |
 | 6 | USA Rare Earth | ? | ziemie rzadkie, magnesy | 1,6 mld USD od rządu USA; czy notowana i pod jakim tickerem — sprawdzić | CATO | sprawdzić |
 | 7 | Korea Zinc | 010130.KS? | cynk, metale krytyczne | 1,6 mld USD od rządu USA; Seul — ticker do sprawdzenia | CATO | dodać (medium) |
 | 8 | Vulcan Elements | — | magnezy ziem rzadkich (USA) | 670 mln USD od rządu; prawdopodobnie prywatna — sprawdzić | CATO | sprawdzić |
@@ -133,13 +140,15 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 
 ## Portfele twórców (tylko jako sygnał, co jest popularne)
 
+- **inwestycjezradkiem** „3 spółki, którymi rozegrałbym boom na humanoidy”: Symbotic, MP Materials, Moog. Ten sam zestaw co u B. Kuci — popularna narracja, nie niezależne potwierdzenie.
+
 - **finanse_na_sterydach** (po 4 mies.): AVGO, SPCX, MU, PLTR, MRVL. Dwie z pięciu to pamięci/układy dla datacenter.
 
 ---
 
 ## Pytania do Rafała
 
-- [ ] Screen z „1” (pierwsza paczka): czy to Moog?
+- [x] Screen z „1” (pierwsza paczka): tak, Moog — potwierdzone drugim reelem
 - [ ] Warstwa 2 „infrastruktura fizyczna” (Vertiv, Vistra, GE Vernova, Quanta): osobny segment na stronie, czy pominąć?
 - [ ] Sprzęt do produkcji chipów (ASML, LRCX, AMAT, KLAC) i pamięci (MU, MRVL): do segmentu platforma/AI, czy to już za daleko?
 - [ ] ETF-y na złoto/srebro/uran: pokazywać na stronie w sekcji surowce, czy tylko miedź i ziemie rzadkie?
