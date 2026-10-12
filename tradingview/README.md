@@ -33,7 +33,7 @@ Interwał **1D**. Alert per symbol, „Dowolna funkcja alert()”, webhook Disco
 
 - portfel — wszystko z `data/portfolio.csv`,
 - okazje — MU, ASML, NBIS, NVDA, TSLA, KOID (+ NTNX, jeśli potwierdzisz „X” z reela),
-- krypto — ARB/USDT (Binance), BTC, ETH, SOL.
+- krypto — ARB/USDT (Binance), BTC, ETH, SOL. (W Yahoo Arbitrum to `ARB11841-USD`; zwykłe `ARB-USD` to martwy token.)
 
 Reszta list (141 instrumentów) zostaje w bocie co godzinę — tam nie trzeba
 klikać alertów ręcznie.

@@ -472,7 +472,7 @@ def test_pullback_needs_a_correction_not_just_a_runup():
 def test_tradingview_crypto_symbol_mapping():
     from tracker.sources.tradingview import to_yahoo
 
-    assert to_yahoo("ARBUSDT", "BINANCE") == "ARB-USD"
+    assert to_yahoo("ARBUSDT", "BINANCE") == "ARB11841-USD"
     assert to_yahoo("BTCUSD", "COINBASE") == "BTC-USD"
 
 

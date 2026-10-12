@@ -20,8 +20,10 @@ CRYPTO_ALIASES = {
 }
 
 # Coins whose ticker collides with another asset carry a numeric id in Yahoo's symbol.
-CRYPTO_YAHOO = {"SUI": "SUI20947-USD", "UNI": "UNI7083-USD", "APT": "APT21794-USD",
-                "TAO": "TAO22974-USD", "POL": "POL28321-USD", "MATIC": "POL28321-USD"}
+# Yahoo's plain "ARB-USD" is a dead token, not Arbitrum (found on the first real dump).
+CRYPTO_YAHOO = {"ARB": "ARB11841-USD", "SUI": "SUI20947-USD", "UNI": "UNI7083-USD", "APT": "APT21794-USD",
+                "TAO": "TAO22974-USD", "POL": "POL28321-USD", "MATIC": "POL28321-USD",
+                "TON": "TON11419-USD", "TIA": "TIA22861-USD"}
 
 _QUOTE_TYPES = {"EQUITY": STOCK, "ETF": ETF, "MUTUALFUND": ETF, "CRYPTOCURRENCY": CRYPTO}
 

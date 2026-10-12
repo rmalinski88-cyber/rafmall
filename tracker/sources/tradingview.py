@@ -75,12 +75,14 @@ def parse_response(payload: dict) -> list[dict]:
 def to_yahoo(ticker: str, exchange: str) -> str:
     """TradingView 'XETR:SIE' -> Yahoo 'SIE.DE'; 'BINANCE:ARBUSDT' -> 'ARB-USD'; US tickers pass through."""
     if exchange in ("BINANCE", "COINBASE", "BYBIT", "OKX", "KRAKEN", "BITGET", "KUCOIN", "CRYPTO"):
+        from ..instruments import CRYPTO_YAHOO
+
         base = ticker
         for quote in ("USDT", "USDC", "USD", "BUSD"):
             if base.endswith(quote):
                 base = base[: -len(quote)]
                 break
-        return f"{base}-USD"
+        return CRYPTO_YAHOO.get(base, f"{base}-USD")
     suffix = {"XETR": ".DE", "FWB": ".F", "TSE": ".T", "GPW": ".WA", "LSE": ".L", "EURONEXT": ".PA",
               "SIX": ".SW", "HKEX": ".HK", "TWSE": ".TW", "KRX": ".KS", "SSE": ".SS", "SZSE": ".SZ"}.get(exchange, "")
     return ticker.replace(".", "-") + suffix
