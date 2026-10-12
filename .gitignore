@@ -12,3 +12,4 @@ data/portfolio.csv
 out/*.json
 out/*.log
 out/site/
+.claude/settings.local.json
