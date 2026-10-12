@@ -29,6 +29,7 @@ Status: `dodać` → `w CSV` → `ticker OK` → `na stronie`
 - [ ] `python -m screener --universe data/universe_humanoid_global.csv validate`
 - [ ] poprawić tickery ze statusem BŁĄD
 - [ ] pobrać pełny skład KOID (kraneshares.com) i HUMN (roundhillinvestments.com) — spółki obecne w obu ETF-ach, a nieobecne na naszej liście, to kandydaci nr 1
+- [ ] odszukać pozostałe ETF-y z reela „Te 7 ETF-ów prawdopodobnie przebije S&P500” (Bartosz Kucia) — na screenach był tylko KOID (nr 3); sprawdzić pozostałe 6 i dopisać te z robotyki/automatyki/AI do sekcji ETF-ów
 - [ ] wygenerować `roboty.html` i obejrzeć
 
 ## Do zrobienia w kodzie (mogę z telefonu)
