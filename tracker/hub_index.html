@@ -1,0 +1,63 @@
+{% extends "hub_base.html" %}{% set page = 'index' %}
+{% block title %}Narzędzie rafmall.ch — szukaj, okazje, inwestorzy{% endblock %}
+{% block body %}
+<h1>Rynek dziś. <em>Konkretnie, w liczbach.</em></h1>
+<p class="lead">Wyszukiwarka akcji, ETF i krypto, dzisiejsze anomalie (skoki wolumenu, wybicia, setupy) i to, co robią duże portfele. Wszystko liczone automatycznie z tych samych reguł, codziennie.</p>
+<div class="tiles">
+  <div class="tile"><div class="k">Instrumenty</div><div class="v">{{ n_instruments }}</div><div class="s">akcje, ETF, krypto</div></div>
+  <div class="tile"><div class="k">Alerty dziś</div><div class="v">{{ n_alerts }}</div><div class="s">na {{ checked }} sprawdzonych</div></div>
+  <div class="tile"><div class="k">Setupy na rynku</div><div class="v">{{ n_setups }}</div><div class="s">{{ market_checked }} płynnych kandydatów</div></div>
+  <div class="tile"><div class="k">Sygnały inwestorów</div><div class="v">{{ n_signals }}</div><div class="s">13F · Kongres · insiderzy</div></div>
+</div>
+<p><a class="btn" href="{{ base_url }}szukaj.html">Szukaj spółki, ETF-u lub monety</a> &nbsp; <a class="btn ghost" href="{{ base_url }}okazje.html">Wszystkie okazje</a></p>
+
+<div class="grid2">
+  <section class="card">
+    <h2>🔥 Konfluencje i okazje</h2>
+    <p class="note">Kilka niezależnych sygnałów na jednym instrumencie tego samego dnia, albo spółka z Twojej listy okazji, która spadła do progu.</p>
+    {% set hot = konfluencje + (alert_groups|selectattr('kind','equalto','okazja')|map(attribute='items')|first or []) %}
+    {% if hot %}<div class="scroll"><table><tbody>
+      {% for a in hot[:12] %}<tr><td class="l"><span class="sym">{{ a.ticker }}</span> <span class="sub">{{ a.name }}</span></td><td class="l">{{ a.headline }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p class="empty">Dziś bez konfluencji i okazji.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>🎯 Setupy na całym rynku</h2>
+    <p class="note">Impuls na wolumenie przez EMA30, korekta do średniej, pierwsza świeca w górę — reguła z przykładu Arbitrum.</p>
+    {% if setups %}<div class="scroll"><table><tbody>
+      {% for s in setups[:10] %}<tr><td class="l"><span class="sym">{{ s.ticker }}</span> <span class="sub">{{ s.name }}</span></td><td>{{ s.last_f }}</td><td class="l">{{ s.headline }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p class="empty">Nic nie spełnia reguł dzisiaj.</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>📈 Największe ruchy miesiąca</h2>
+    <p class="note">Zwrot za ostatnie 21 sesji wśród śledzonych instrumentów.</p>
+    <div class="scroll"><table><thead><tr><th class="l">Rośnie</th><th>1M</th><th class="l">Spada</th><th>1M</th></tr></thead><tbody>
+      {% for i in range(8) %}<tr>
+        <td class="l">{% if movers_up[i] is defined %}<span class="sym">{{ movers_up[i].symbol }}</span> <span class="sub">{{ movers_up[i].name }}</span>{% endif %}</td>
+        <td class="good">{{ movers_up[i].r1 if movers_up[i] is defined else '' }}</td>
+        <td class="l">{% if movers_down[i] is defined %}<span class="sym">{{ movers_down[i].symbol }}</span> <span class="sub">{{ movers_down[i].name }}</span>{% endif %}</td>
+        <td class="bad">{{ movers_down[i].r1 if movers_down[i] is defined else '' }}</td>
+      </tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+  <section class="card">
+    <h2>🕵️ Inwestorzy: kto kupuje, kto sprzedaje</h2>
+    <p class="note">Bilans kupujących i sprzedających z 13F (Buffett, Dalio, Ackman, Wood, Burry), Kongresu i insiderów. Szczegóły: <a href="{{ base_url }}inwestorzy.html">Inwestorzy</a>.</p>
+    {% if top_signals %}<div class="scroll"><table><thead><tr><th class="l">Ticker</th><th>Wynik</th><th class="l">Dlaczego</th></tr></thead><tbody>
+      {% for s in top_signals[:10] %}<tr><td class="l"><span class="sym">{{ s.ticker }}</span> <span class="sub">{{ s.name }}</span></td><td class="{{ s.tone }}">{{ '%+.1f'|format(s.score) }}</td><td class="wrap">{{ s.reasons[:2]|join('; ') }}</td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p class="empty">Brak sygnałów — bez klucza SEC/Quiver sekcja jest pusta.</p>{% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Portfel Trumpa — instrumenty</h2>
+  <p class="note">Trump nie zgłasza transakcji jak Kongres; to, co da się śledzić na bieżąco, to kursy instrumentów powiązanych i zgłoszenia insiderów DJT. Opis i kontekst: <a href="https://rafmall.ch/portfel">rafmall.ch/portfel</a>.</p>
+  <div class="scroll"><table><thead><tr><th class="l">Instrument</th><th>Kurs</th><th>1M</th><th>12M</th><th>RSI</th><th>vs SMA200</th><th class="l">Trend</th><th class="l">120 sesji</th></tr></thead><tbody>
+    {% for v in trump %}<tr>
+      <td class="l"><span class="sym">{{ v.symbol }}</span><div class="sub">{{ v.name }}{% if v.error %} · {{ v.error }}{% endif %}</div></td>
+      <td>{{ v.last_f }} <span class="sub">{{ v.currency }}</span></td><td class="{{ v.tone1 }}">{{ v.r1 }}</td><td class="{{ v.tone12 }}">{{ v.r12 }}</td>
+      <td>{{ v.rsi_f }}</td><td>{{ v.s200 }}</td><td class="l">{{ v.trend }}</td><td class="l">{{ v.spark_svg }}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% if warnings %}<section class="card"><h2>Uwagi z przebiegu</h2><ul>{% for w in warnings %}<li class="sub">{{ w }}</li>{% endfor %}</ul></section>{% endif %}
+{% endblock %}

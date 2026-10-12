@@ -1,0 +1,31 @@
+{% extends "hub_base.html" %}{% set page = 'okazje' %}
+{% block title %}Okazje — anomalie i setupy{% endblock %}
+{% block body %}
+<h1>Okazje. <em>Co dziś odstaje.</em></h1>
+<p class="lead">Reguły liczone na {{ checked }} śledzonych instrumentach i na całym rynku USA + krypto. Alerty są bilansem liczb, nie opinią: skok wolumenu, ruch większy niż zwykła zmienność, wybicie, przebicie poziomu, kilka sygnałów naraz.</p>
+<div class="tiles">
+  <div class="tile"><div class="k">Alerty</div><div class="v">{{ n_alerts }}</div><div class="s">na listach</div></div>
+  <div class="tile"><div class="k">Konfluencje</div><div class="v">{{ konfluencje|length }}</div><div class="s">≥ 2 sygnały naraz</div></div>
+  <div class="tile"><div class="k">Setupy</div><div class="v">{{ n_setups }}</div><div class="s">cały rynek</div></div>
+</div>
+<section class="card">
+  <h2>🎯 Setupy na całym rynku</h2>
+  <p class="note">Kandydaci ze screenera TradingView (wolumen ≥ 2×, kurs nad EMA30), potwierdzeni na danych dziennych: impuls → korekta do EMA30 → pierwsza świeca w górę. Jeden sygnał na setup.</p>
+  {% if setups %}<div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th>Kurs</th><th>Obrót/dzień</th><th class="l">Sygnał</th><th class="l">Szczegóły</th></tr></thead><tbody>
+    {% for s in setups %}<tr><td class="l sym">{{ s.ticker }}</td><td class="l">{{ s.name }}</td><td>{{ s.last_f }}</td><td>{{ s.turnover_f }}</td><td class="l">{{ s.headline }}</td><td class="wrap">{{ s.detail }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<p class="empty">Dziś żaden kandydat nie spełnił wszystkich trzech warunków.</p>{% endif %}
+</section>
+{% for g in alert_groups %}
+<section class="card">
+  <h2><span class="icon">{{ g.icon }}</span>{{ g.label }} <span class="sub">({{ g.items|length }})</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    {% for a in g.items %}<tr>
+      <td class="l sym">{{ a.ticker }}</td><td class="l">{{ a.name }}</td><td class="l">{{ a.headline }}</td><td class="wrap">{{ a.detail }}</td>
+      <td class="l">{% if a.in_portfolio %}<span class="pill acc">portfel</span>{% endif %}{% if a.on_dip_list %}<span class="pill good">okazje</span>{% endif %}</td>
+    </tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% else %}
+<section class="card"><p class="empty">Brak alertów w ostatnim przebiegu.</p></section>
+{% endfor %}
+{% endblock %}

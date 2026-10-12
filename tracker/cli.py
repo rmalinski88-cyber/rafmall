@@ -68,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--no-html", action="store_true", help="nie zapisuj raportu HTML")
     scan.add_argument("--out-dir", default="out", help="katalog na raporty")
     scan.add_argument("--top", type=int, default=25, help="ile sygnałów pokazać w konsoli")
+    scan.add_argument("--no-remember", action="store_true", help="nie zapisuj stanu „już zgłoszone” (do generowania strony)")
 
     alerts = sub.add_parser("alerts", help="anomalie: skoki wolumenu i ceny, wybicia, okazje zakupowe (do rutyny co godzinę)")
     alerts.add_argument("--universe", action="append", default=[], metavar="PLIK.csv",
@@ -76,6 +77,7 @@ def build_parser() -> argparse.ArgumentParser:
     alerts.add_argument("--no-smart", action="store_true", help="pomiń transakcje insiderów/Kongresu")
     alerts.add_argument("--discord", action="store_true", help="wyślij na Discord (DISCORD_WEBHOOK_URL)")
     alerts.add_argument("--out-dir", default="out", help="katalog na JSON z alertami")
+    alerts.add_argument("--no-remember", action="store_true", help="nie zapisuj stanu „już zgłoszone” (do generowania strony)")
 
     market = sub.add_parser("market", help="skan całego rynku USA: spółki, które właśnie zaczynają ruch (EMA30 + wolumen)")
     market.add_argument("--rule", action="append", default=[], help="reguła (domyślnie wszystkie): ema30")
@@ -88,6 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     market.add_argument("--top", type=int, default=30, help="ile najmocniejszych pokazać")
     market.add_argument("--discord", action="store_true", help="wyślij na Discord")
     market.add_argument("--out-dir", default="out")
+    market.add_argument("--no-remember", action="store_true", help="nie zapisuj stanu „już zgłoszone” (do generowania strony)")
 
     replay = sub.add_parser("replay", help="odtwórz regułę skanu na historii jednego symbolu: w które dni by odpaliła")
     replay.add_argument("symbol", help="np. ARB-USD, NVDA")
@@ -97,6 +100,12 @@ def build_parser() -> argparse.ArgumentParser:
     dump = sub.add_parser("dump", help="wypisz notowania (CSV) wybranych symboli — do zapisania jako data/samples/*.csv")
     dump.add_argument("symbols", nargs="+", help="np. ARB-USD NVDA BTC")
     dump.add_argument("--days", type=int, default=400)
+
+    hub = sub.add_parser("hub", help="strona narzędzia online: index, szukaj, okazje, inwestorzy + api/*.json (z wyników w out/)")
+    hub.add_argument("--out-dir", default="out", help="skąd brać alerts_/market_/signals_*.json i tracker_*.html")
+    hub.add_argument("--site", default="out/site", help="dokąd pisać stronę")
+    hub.add_argument("--base-url", default="", help="prefiks linków (zwykle pusty)")
+    hub.add_argument("--limit", type=int, help="ogranicz liczbę instrumentów (do testów)")
 
     sub.add_parser("check", help="sprawdź konfigurację i dostęp do źródeł danych")
     return parser
@@ -159,7 +168,8 @@ def main(argv: list[str] | None = None) -> int:
 
     handlers = {"find": _cmd_find, "quote": _cmd_quote, "congress": _cmd_congress,
                 "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check,
-                "alerts": _cmd_alerts, "market": _cmd_market, "replay": _cmd_replay, "dump": _cmd_dump}
+                "alerts": _cmd_alerts, "market": _cmd_market, "replay": _cmd_replay, "dump": _cmd_dump,
+                "hub": _cmd_hub}
     try:
         code = handlers[args.command](ctx)
     except (FeedError, ProviderError, FileNotFoundError, ValueError) as exc:
@@ -349,10 +359,11 @@ def _cmd_scan(ctx: Context) -> int:
 
     _print_warnings(ctx.feed.warnings)
 
-    store.remember(trades)
-    for rep in fund_reports:
-        store.remember_key(f"13f|{rep.fund.key}|{rep.filed_now}")
-    store.save()
+    if not a.no_remember:
+        store.remember(trades)
+        for rep in fund_reports:
+            store.remember_key(f"13f|{rep.fund.key}|{rep.filed_now}")
+        store.save()
     return 0
 
 
@@ -424,9 +435,10 @@ def _cmd_alerts(ctx: Context) -> int:
     elif a.discord:
         print("Discord: nic nowego, nie wysyłam", file=sys.stderr)
 
-    for x in run.alerts:
-        store.remember_key(x.key)
-    store.save()
+    if not a.no_remember:
+        for x in run.alerts:
+            store.remember_key(x.key)
+        store.save()
     _print_warnings(run.warnings)
     return 0
 
@@ -545,11 +557,31 @@ def _cmd_market(ctx: Context) -> int:
         except Exception as exc:
             print(f"Discord: błąd ({exc})", file=sys.stderr)
 
-    for s in scan.setups:
-        store.remember_key(s.key)
-    store.save()
+    if not a.no_remember:
+        for s in scan.setups:
+            store.remember_key(s.key)
+        store.save()
     if scan.warnings:
         print(f"\n{len(scan.warnings)} symboli z błędami (pierwsze 5): " + "; ".join(scan.warnings[:5]), file=sys.stderr)
+    return 0
+
+
+def _cmd_hub(ctx: Context) -> int:
+    from .hub import build_hub, collect_instruments
+
+    a = ctx.args
+
+    def progress(i, n, symbol):
+        if i % 10 == 0 or i == n:
+            print(f"  notowania [{i}/{n}] {symbol}   ", end="\r", file=sys.stderr, flush=True)
+
+    instruments = collect_instruments(ctx.provider, ctx.config, limit=a.limit, progress=progress)
+    print(" " * 50, end="\r", file=sys.stderr)
+    written = build_hub(instruments, Path(a.out_dir), Path(a.site), ctx.config, base_url=a.base_url)
+    errors = sum(1 for r in instruments if r.get("error"))
+    print(f"Hub: {len(instruments)} instrumentów ({errors} bez notowań) → {a.site}", file=sys.stderr)
+    for path in written:
+        print(f"  {path}", file=sys.stderr)
     return 0
 
 

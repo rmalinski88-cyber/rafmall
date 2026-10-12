@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Narzędzie rafmall.ch{% endblock %}</title>
+<meta name="description" content="Wyszukiwarka akcji, ETF i krypto, okazje handlowe (skoki wolumenu, setupy) i ruchy dużych inwestorów. Dane odświeżane automatycznie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokeny skopiowane z rafmall.ch (Lovable), żeby narzędzie wyglądało jak część serwisu. */
+  :root {
+    color-scheme: dark;
+    --background: oklch(18% .025 250); --foreground: oklch(96% .005 250);
+    --primary: oklch(55% .13 255); --primary-fg: oklch(98% .005 250);
+    --secondary: oklch(28% .03 250); --muted: oklch(26% .025 250); --muted-fg: oklch(70% .02 250);
+    --accent: oklch(78% .14 75); --card: oklch(22% .028 250); --border: oklch(32% .025 250);
+    --good: oklch(72% .17 150); --bad: oklch(66% .2 25); --warn: oklch(78% .14 75);
+    --radius: .625rem; --font: "Inter", "Segoe UI", system-ui, sans-serif; --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
+  header.top { display: flex; align-items: center; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; flex-wrap: wrap; }
+  header.top .brand { font-family: var(--font-head); font-weight: 700; color: var(--accent); font-size: 1.05rem; }
+  header.top nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: .92rem; }
+  header.top nav a { color: var(--muted-fg); } header.top nav a.on, header.top nav a:hover { color: var(--foreground); text-decoration: none; }
+  header.top .stamp { margin-left: auto; color: var(--muted-fg); font-size: .82rem; }
+  h1 { font-family: var(--font-head); font-size: 2rem; margin: 0 0 6px; letter-spacing: -.01em; } h1 em { color: var(--accent); font-style: normal; }
+  h2 { font-family: var(--font-head); font-size: 1.25rem; margin: 0 0 4px; } h3 { font-size: 1rem; margin: 18px 0 8px; }
+  p.lead { color: var(--muted-fg); max-width: 760px; margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .tile .k { font-size: .75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .05em; }
+  .tile .v { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; } .tile .s { font-size: .8rem; color: var(--muted-fg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 0 0 20px; }
+  .card .note { color: var(--muted-fg); font-size: .85rem; margin: 0 0 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted-fg); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--card); }
+  th.l, td.l { text-align: left; } td.wrap { white-space: normal; min-width: 240px; text-align: left; color: var(--muted-fg); font-size: .8rem; }
+  tbody tr:hover { background: var(--secondary); } tr[hidden] { display: none; }
+  .sym { font-weight: 600; } .sub { color: var(--muted-fg); font-size: .78rem; font-weight: 400; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .neutral { color: var(--muted-fg); }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .72rem; border: 1px solid var(--border); color: var(--muted-fg); margin-right: 4px; }
+  .pill.acc { border-color: var(--accent); color: var(--accent); } .pill.bad { border-color: var(--bad); color: var(--bad); } .pill.good { border-color: var(--good); color: var(--good); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 16px; }
+  .controls input, .controls select { font: inherit; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--secondary); color: var(--foreground); min-width: 220px; }
+  .chip { font: inherit; font-size: .8rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted-fg); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+  .alert-row td.head { text-align: left; } .icon { width: 1.4em; display: inline-block; }
+  .empty { color: var(--muted-fg); font-style: italic; }
+  .btn { display: inline-block; padding: 9px 14px; border-radius: var(--radius); background: var(--accent); color: #111; font-weight: 600; font-size: .9rem; } .btn:hover { text-decoration: none; filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
+  footer { color: var(--muted-fg); font-size: .8rem; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 32px; }
+  svg.spark polyline { stroke: var(--accent); } svg.spark circle { fill: var(--accent); }
+  @media (max-width: 640px) { h1 { font-size: 1.5rem; } header.top .stamp { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="https://rafmall.ch">rafmall.ch</a>
+    <nav>
+      <a href="{{ base_url }}index.html" {% if page == 'index' %}class="on"{% endif %}>Narzędzie</a>
+      <a href="{{ base_url }}szukaj.html" {% if page == 'szukaj' %}class="on"{% endif %}>Szukaj</a>
+      <a href="{{ base_url }}okazje.html" {% if page == 'okazje' %}class="on"{% endif %}>Okazje</a>
+      <a href="{{ base_url }}inwestorzy.html">Inwestorzy</a>
+      <a href="{{ base_url }}roboty.html">Robotyka</a>
+      <a href="https://rafmall.ch/portfel">Portfel Trumpa ↗</a>
+    </nav>
+    <span class="stamp">dane z {{ today }}</span>
+  </header>
+  {% block body %}{% endblock %}
+  <footer>
+    Dane: Yahoo Finance (opóźnienie ok. 15 min), SEC EDGAR, screener TradingView. Odświeżane automatycznie przez GitHub Actions.
+    Informacja, nie porada inwestycyjna — decyzje podejmujesz na własną odpowiedzialność.
+  </footer>
+</div>
+{% block script %}{% endblock %}
+</body>
+</html>

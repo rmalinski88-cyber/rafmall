@@ -1,0 +1,8 @@
+ticker,name,note
+# „Portfel Trumpa" — instrumenty powiązane z Trumpem i jego otoczeniem, do karty na stronie.
+# Trump nie składa zgłoszeń o transakcjach (STOCK Act dotyczy Kongresu); jedyne twarde dane to
+# roczne oświadczenie majątkowe OGE (stan posiadania, PDF) i zgłoszenia SEC insiderów spółek.
+DJT,Trump Media & Technology Group,"Truth Social; insiderzy DJT w SEC Form 4"
+TRUMP-USD,Official Trump (memecoin),"zweryfikuj symbol Yahoo"
+WLFI-USD,World Liberty Financial,"token projektu rodziny Trumpa; zweryfikuj symbol Yahoo"
+BTC-USD,Bitcoin,"rezerwa strategiczna BTC (dekret 2025)"

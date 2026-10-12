@@ -1,0 +1,44 @@
+{% extends "hub_base.html" %}{% set page = 'szukaj' %}
+{% block title %}Szukaj — akcje, ETF, krypto{% endblock %}
+{% block body %}
+<h1>Szukaj. <em>Akcje, ETF, krypto.</em></h1>
+<p class="lead">{{ n_instruments }} instrumentów ze wszystkich list: robotyka, surowce, energia, inne tematy, ETF-y, Bitcoin i alty. Wpisz nazwę, ticker albo słowo z opisu (np. „łożyska”, „uran”, „Trump”).</p>
+<div class="controls">
+  <input id="q" type="search" placeholder="Szukaj: NVDA, Siemens, łożyska, solana…" aria-label="Szukaj" autofocus>
+  <span class="chip" role="button" data-k="" aria-pressed="true">Wszystko</span>
+  {% for key, label in classes.items() %}<span class="chip" role="button" data-k="{{ key }}" aria-pressed="false">{{ label }}</span>{% endfor %}
+  <select id="grp" aria-label="Lista"><option value="">Wszystkie listy</option>{% for g in groups %}<option value="{{ g }}">{{ g }}</option>{% endfor %}</select>
+  <span class="sub" id="cnt"></span>
+</div>
+<section class="card"><div class="scroll">
+<table id="t">
+  <thead><tr><th class="l">Instrument</th><th class="l">Typ</th><th class="l">Listy</th><th>Kurs</th><th>Wielkość</th><th>1M</th><th>3M</th><th>12M</th><th>RSI</th><th>vs SMA200</th><th>od szczytu</th><th class="l">Trend</th><th class="l">120 sesji</th></tr></thead>
+  <tbody>
+  {% for v in instruments %}
+    <tr data-k="{{ v.asset_class }}" data-g="{{ v.groups|join('|') }}" data-s="{{ v.search }}">
+      <td class="l"><span class="sym">{{ v.symbol }}</span><div class="sub">{{ v.name }}{% if v.market %} · {{ v.market }}{% endif %}{% if v.error %} · <span class="bad">{{ v.error }}</span>{% endif %}</div></td>
+      <td class="l"><span class="pill{% if v.asset_class == 'krypto' %} acc{% endif %}">{{ classes.get(v.asset_class, v.asset_class) }}</span></td>
+      <td class="l">{% for g in v.groups %}<span class="pill">{{ g }}</span>{% endfor %}</td>
+      <td>{{ v.last_f }} <span class="sub">{{ v.currency }}</span></td><td>{{ v.size_f }}</td>
+      <td class="{{ v.tone1 }}">{{ v.r1 }}</td><td>{{ v.r3 }}</td><td class="{{ v.tone12 }}">{{ v.r12 }}</td>
+      <td>{{ v.rsi_f }}</td><td>{{ v.s200 }}</td><td>{{ v.dh }}</td><td class="l">{{ v.trend }}</td><td class="l">{{ v.spark_svg }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></section>
+{% endblock %}
+{% block script %}
+<script>
+(function(){
+  var q=document.getElementById('q'), grp=document.getElementById('grp'), cnt=document.getElementById('cnt'), k='';
+  var rows=[].slice.call(document.querySelectorAll('#t tbody tr'));
+  function apply(){ var t=q.value.trim().toLowerCase(), g=grp.value, n=0;
+    rows.forEach(function(tr){ var ok=(!k||tr.dataset.k===k)&&(!g||tr.dataset.g.split('|').indexOf(g)>=0)&&(!t||tr.dataset.s.indexOf(t)>=0); tr.hidden=!ok; if(ok)n++; });
+    cnt.textContent='pokazano '+n; }
+  q.addEventListener('input',apply); grp.addEventListener('change',apply);
+  document.querySelectorAll('.chip').forEach(function(c){ c.addEventListener('click',function(){ k=c.dataset.k; document.querySelectorAll('.chip').forEach(function(x){x.setAttribute('aria-pressed',x===c?'true':'false');}); apply(); }); });
+  var h=new URLSearchParams(location.search).get('q'); if(h){ q.value=h; } apply();
+})();
+</script>
+{% endblock %}

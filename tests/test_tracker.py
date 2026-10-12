@@ -547,3 +547,21 @@ def test_samples_provider_reads_csv_and_falls_back(tmp_path):
 def test_crypto_symbols_with_yahoo_ids():
     assert normalise_symbol("sui") == "SUI20947-USD" and normalise_symbol("MATIC") == "POL28321-USD"
     assert normalise_symbol("btc") == "BTC-USD"
+
+
+def test_hub_builds_pages_and_api(offline_config, tmp_path, capsys):
+    args = ["--config", str(offline_config), "--feed", "fixture", "--no-cache"]
+    out = tmp_path / "out"
+    assert main(args + ["alerts", "--all", "--no-smart", "--no-remember", "--out-dir", str(out)]) == 0
+    assert main(args + ["market", "--all", "--symbols", "data/okazje.csv", "--no-remember", "--out-dir", str(out)]) == 0
+    assert main(args + ["scan", "--no-quotes", "--no-html", "--no-remember", "--out-dir", str(out)]) == 0
+    capsys.readouterr()
+    site = tmp_path / "site"
+    assert main(args + ["hub", "--limit", "25", "--out-dir", str(out), "--site", str(site)]) == 0
+    for name in ("index.html", "szukaj.html", "okazje.html", "api/instruments.json", "api/alerts.json", "api/meta.json"):
+        assert (site / name).exists(), name
+    html = (site / "index.html").read_text(encoding="utf-8")
+    assert "Portfel Trumpa" in html and "rafmall.ch" in html
+    import json
+    data = json.loads((site / "api/instruments.json").read_text(encoding="utf-8"))
+    assert data["count"] == 25 and data["items"][0]["symbol"]
