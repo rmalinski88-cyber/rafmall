@@ -193,6 +193,8 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 
 ## Zasady od Rafała
 
+- **Reguła „zainteresuj się spółką”**: świece dzienne, przebicie EMA30 + utrzymanie ≥ 3 sesje + wolumen ≥ 2× ostatnich świec. Szukać na całym rynku, nie tylko na listach → `tracker market`.
+
 - **Ciekawe spółki z każdego sektora** trafiają na stronę, w osobnej sekcji z własnym rankingiem.
 - **Jakość, nie ilość.** To, co wrzuca ze screenów, to kandydaci do sprawdzenia; po weryfikacji część odpada.
 - **Powiadomienia: Discord** (webhook). Rutyna Claude ewentualnie osobno, do streszczeń.

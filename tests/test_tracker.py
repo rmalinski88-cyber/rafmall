@@ -242,6 +242,7 @@ def offline_config(tmp_path):
     cfg = tmp_path / "tracker.yml"
     cfg.write_text(src.replace(".cache/tracker_seen.json", str(tmp_path / "seen.json"))
                       .replace(".cache/tracker_alerts_seen.json", str(tmp_path / "alerts_seen.json"))
+                      .replace(".cache/tracker_market_seen.json", str(tmp_path / "market_seen.json"))
                       .replace("cache_dir: .cache", f"cache_dir: {tmp_path / 'cache'}"), encoding="utf-8")
     return cfg
 
@@ -363,3 +364,53 @@ def test_confluence_needs_two_kinds():
     two = one + [Alert("poziom", "X", "X", "c", "d", 1.8, day=d)]
     out = mark_confluence(two)
     assert any(a.kind == KONFLUENCJA and a.score > 10 for a in out)
+
+
+# -- market scan -------------------------------------------------------------
+
+
+def _ema_setup_frame(hold=3, vol_mult=3.0, pre=80):
+    """Flat below EMA, then a break with volume, then `hold` closes above."""
+    import numpy as np
+    closes = [100.0 - 0.1 * i for i in range(pre)]            # drifting down: below EMA
+    closes += [108.0] + [109.0 + i for i in range(hold - 1)]  # break + hold
+    vols = [1_000_000] * pre + [int(1_000_000 * vol_mult)] + [1_200_000] * (hold - 1)
+    return _frame(closes, vols)
+
+
+def test_ema30_fires_after_three_day_hold_with_volume():
+    from tracker.market import DEFAULTS, ema_break_and_hold
+
+    hit = ema_break_and_hold("T", "Test", _ema_setup_frame(), DEFAULTS)
+    assert hit is not None and "od 3 sesji" in hit.headline and "3.0×" in hit.headline
+
+
+def test_ema30_needs_volume_and_hold():
+    from tracker.market import DEFAULTS, ema_break_and_hold
+
+    assert ema_break_and_hold("T", "T", _ema_setup_frame(vol_mult=1.2), DEFAULTS) is None
+    assert ema_break_and_hold("T", "T", _ema_setup_frame(hold=2), DEFAULTS) is None
+
+
+def test_ema30_ignores_old_breaks():
+    from tracker.market import DEFAULTS, ema_break_and_hold
+
+    assert ema_break_and_hold("T", "T", _ema_setup_frame(hold=10), DEFAULTS) is None
+
+
+def test_liquidity_floor():
+    from tracker.market import DEFAULTS, liquid_enough
+
+    assert liquid_enough(_frame([50.0] * 80, [100_000] * 80), DEFAULTS)
+    assert not liquid_enough(_frame([1.0] * 80, [100_000] * 80), DEFAULTS)  # penny
+    assert not liquid_enough(_frame([50.0] * 80, [1_000] * 80), DEFAULTS)   # thin
+
+
+def test_market_command_runs_on_symbol_file(offline_config, tmp_path, capsys):
+    symbols = tmp_path / "s.csv"
+    symbols.write_text("ticker,name\nNVDA,NVIDIA\nMSFT,Microsoft\nAAPL,Apple\n", encoding="utf-8")
+    args = ["--config", str(offline_config), "--feed", "fixture", "--no-cache",
+            "market", "--symbols", str(symbols), "--all", "--out-dir", str(tmp_path)]
+    assert main(args) == 0
+    assert "Skan rynku" in capsys.readouterr().out
+    assert next(tmp_path.glob("market_*.json")).exists()

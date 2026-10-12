@@ -330,6 +330,31 @@ Bez tej zmiennej `--discord` tylko informuje, że nic nie wysłał.
 **Czego nie wykryje:** reeli influencerów. Instagram nie ma API. Ślad po nich
 to zwykle skok wolumenu bez wyników i bez komunikatu spółki — to wyłapie reguła „wolumen”.
 
+## Skan całego rynku: kto właśnie zaczyna ruch
+
+```bash
+python -m tracker market                  # cały rynek USA (lista SEC, ~3 tys. płynnych spółek)
+python -m tracker market --discord        # ...i na Discord
+python -m tracker market --symbols data/universe_inne.csv   # własna lista
+```
+
+Inaczej niż `alerts`, które pilnują Twoich list, `market` przegląda **wszystkie
+spółki notowane w USA** (spis SEC, za darmo) i pokazuje te, które właśnie
+spełniły regułę. Pierwsza reguła, `ema30`, to reguła Rafała:
+
+1. kurs przebija EMA30 od dołu (świece dzienne),
+2. zamyka się nad nią przez **3 kolejne sesje**,
+3. w dniu przebicia lub podczas utrzymania wolumen ≥ **2× średnia** z 20 sesji sprzed przebicia.
+
+Sygnał pojawia się raz, w dniu potwierdzenia (trzecia sesja). Przebicia
+starsze niż 6 sesji są pomijane — to już nie początek ruchu. Odfiltrowane są
+spółki poniżej 2 USD i z obrotem poniżej 2 mln USD dziennie. Progi w
+`config/tracker.yml` → `market_rules`.
+
+Pierwszy przebieg pobiera kilka tysięcy symboli z Yahoo (30–60 minut);
+kolejne idą z cache. Uruchamiaj raz dziennie po sesji USA (ok. 23:00 CET).
+Kolejne reguły to jedna funkcja w `tracker/market.py` i jeden wpis w `RULES`.
+
 ## TradingView
 
 Wskaźnik `tradingview/rafmall_konfluencja.pine` rysuje na wykresie te same
@@ -346,6 +371,7 @@ przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
 CRON_TZ=America/New_York
 0 9-16 * * 1-5  cd ~/rafmall && python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
 30 9-16 * * 1-5 cd ~/rafmall && python -m tracker alerts --discord >> out/alerts.log 2>&1
+0 17 * * 1-5    cd ~/rafmall && python -m tracker market --discord >> out/market.log 2>&1
 ```
 
 Ten sam przebieg może uruchamiać rutyna Claude — wystarczy prompt w stylu:

@@ -62,3 +62,14 @@ alert_rules:
   pivot_lookback: 90         # poziomy z ostatnich 90 sesji; gasną po przebiciu
   confluence_min: 2          # >= 2 różne alerty na spółce tego samego dnia = KONFLUENCJA
 # Powiadomienia: export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+
+# Skan całego rynku (python -m tracker market). Lista symboli: pełny spis SEC (feed: live).
+market_lookback_days: 200
+market_state_file: .cache/tracker_market_seen.json
+market_rules:
+  ema_len: 30                   # przebicie EMA30 na świecach dziennych
+  hold_days: 3                  # ...i utrzymanie nad nią przez 3 sesje
+  volume_multiple: 2.0          # wolumen >= 2x średnia 20 sesji sprzed przebicia
+  max_hold_days: 6              # starsze przebicia to już nie "początek ruchu"
+  min_avg_dollar_volume: 2000000  # min. 2 mln USD obrotu dziennie
+  min_price: 2.0

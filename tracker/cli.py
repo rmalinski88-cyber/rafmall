@@ -14,6 +14,7 @@ from screener.config import load_config
 from screener.providers import ProviderError, available_providers, get_provider
 
 from . import report
+from screener.report import format as fmt
 from .funds import load_funds
 from .instruments import CRYPTO, CRYPTO_ALIASES, describe, normalise_symbol
 from .lists import load_symbols, tickers
@@ -75,6 +76,15 @@ def build_parser() -> argparse.ArgumentParser:
     alerts.add_argument("--discord", action="store_true", help="wyślij na Discord (DISCORD_WEBHOOK_URL)")
     alerts.add_argument("--out-dir", default="out", help="katalog na JSON z alertami")
 
+    market = sub.add_parser("market", help="skan całego rynku USA: spółki, które właśnie zaczynają ruch (EMA30 + wolumen)")
+    market.add_argument("--rule", action="append", default=[], help="reguła (domyślnie wszystkie): ema30")
+    market.add_argument("--symbols", help="własny plik CSV z symbolami zamiast pełnej listy SEC")
+    market.add_argument("--limit", type=int, help="sprawdź tylko N pierwszych symboli (do testów)")
+    market.add_argument("--all", action="store_true", help="pokaż wszystkie, nie tylko nowe od ostatniego skanu")
+    market.add_argument("--top", type=int, default=30, help="ile najmocniejszych pokazać")
+    market.add_argument("--discord", action="store_true", help="wyślij na Discord")
+    market.add_argument("--out-dir", default="out")
+
     sub.add_parser("check", help="sprawdź konfigurację i dostęp do źródeł danych")
     return parser
 
@@ -135,7 +145,7 @@ def main(argv: list[str] | None = None) -> int:
 
     handlers = {"find": _cmd_find, "quote": _cmd_quote, "congress": _cmd_congress,
                 "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check,
-                "alerts": _cmd_alerts}
+                "alerts": _cmd_alerts, "market": _cmd_market}
     try:
         code = handlers[args.command](ctx)
     except (FeedError, ProviderError, FileNotFoundError, ValueError) as exc:
@@ -404,6 +414,103 @@ def _cmd_alerts(ctx: Context) -> int:
         store.remember_key(x.key)
     store.save()
     _print_warnings(run.warnings)
+    return 0
+
+
+def _market_symbols(ctx: Context) -> list[tuple[str, str]]:
+    """(ticker, name) for the whole scan: a CSV if given, else SEC's registrant list."""
+    if ctx.args.symbols:
+        return [(r["ticker"], r.get("name") or r["ticker"]) for r in load_symbols(ctx.args.symbols)]
+    hits = ctx.feed.search_names("", limit=0)
+    if hits:
+        return hits
+    try:
+        table = ctx.feed.sec.tickers()  # live feed only
+    except AttributeError:
+        return []
+    # SEC's list includes warrants, units, preferreds ("-WT", "-U", "-P") — skip them.
+    out = []
+    for ticker, (_, title) in table.items():
+        if any(x in ticker for x in ("-WT", "-U", "-P", "-R", "-UN", "^")) or len(ticker) > 5:
+            continue
+        out.append((ticker, title))
+    return sorted(out)
+
+
+def _cmd_market(ctx: Context) -> int:
+    from .market import DEFAULTS, RULES, MarketScan, liquid_enough
+    from .notify import send_discord
+
+    a, cfg = ctx.args, ctx.config
+    rules = {**DEFAULTS, **(cfg.get("market_rules") or {})}
+    chosen = {k: RULES[k] for k in (a.rule or RULES) if k in RULES}
+    symbols = _market_symbols(ctx)
+    if a.limit:
+        symbols = symbols[: a.limit]
+    if not symbols:
+        print("Brak listy symboli: podaj --symbols PLIK.csv albo użyj feed: live (lista SEC).", file=sys.stderr)
+        return 1
+
+    lookback = int(cfg.get("market_lookback_days", 200))
+    scan = MarketScan(run_date=date.today().isoformat())
+    for i, (ticker, name) in enumerate(symbols, 1):
+        if i % 25 == 0 or i == len(symbols):
+            print(f"  [{i}/{len(symbols)}] {ticker}   ", end="\r", file=sys.stderr, flush=True)
+        try:
+            prices = ctx.provider.get_prices(ticker, lookback)
+        except Exception as exc:
+            scan.warnings.append(f"{ticker}: {exc}")
+            continue
+        if prices is None or prices.empty:
+            continue
+        if not liquid_enough(prices, rules):
+            scan.skipped_illiquid += 1
+            continue
+        scan.checked += 1
+        for fn in chosen.values():
+            try:
+                hit = fn(ticker, name, prices, rules)
+            except Exception as exc:
+                scan.warnings.append(f"{ticker}: {exc}")
+                continue
+            if hit is not None:
+                scan.setups.append(hit)
+    print(" " * 50, end="\r", file=sys.stderr)
+
+    store = SeenStore(cfg.get("market_state_file", ".cache/tracker_market_seen.json"))
+    fresh = [s for s in scan.setups if store.is_new_key(s.key)]
+    shown = sorted(scan.setups if a.all else fresh, key=lambda s: -s.strength)[: a.top]
+
+    title = (f"Skan rynku {scan.run_date} — {len(shown)} {'łącznie' if a.all else 'nowych'} setupów "
+             f"({scan.checked} płynnych z {len(symbols)}; pominięto {scan.skipped_illiquid} mało płynnych)")
+    print(title)
+    if shown:
+        print(report.table(["Ticker", "Nazwa", "Kurs", "Obrót/dzień", "Sygnał", "Szczegóły"], [[
+            s.ticker, s.name[:28], f"{s.last_close:.2f}", fmt.usd(s.avg_dollar_volume), s.headline, s.detail,
+        ] for s in shown], right={2, 3}))
+    else:
+        print("  Nic nowego nie spełnia reguł.")
+
+    out_dir = Path(a.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / f"market_{scan.run_date}.json").write_text(json.dumps({
+        "run_date": scan.run_date, "checked": scan.checked, "skipped_illiquid": scan.skipped_illiquid,
+        "setups": [s.__dict__ for s in shown], "warnings": scan.warnings[:50],
+    }, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+
+    if a.discord and shown:
+        lines = [f"**{title}**"] + [f"🎯 **{s.ticker}** {s.headline}\n   {s.name} — {s.detail}" for s in shown]
+        try:
+            sent = send_discord("\n".join(lines))
+            print("Discord: wysłano" if sent else "Discord: brak DISCORD_WEBHOOK_URL", file=sys.stderr)
+        except Exception as exc:
+            print(f"Discord: błąd ({exc})", file=sys.stderr)
+
+    for s in scan.setups:
+        store.remember_key(s.key)
+    store.save()
+    if scan.warnings:
+        print(f"\n{len(scan.warnings)} symboli z błędami (pierwsze 5): " + "; ".join(scan.warnings[:5]), file=sys.stderr)
     return 0
 
 
