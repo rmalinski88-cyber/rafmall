@@ -15,7 +15,7 @@
   <section class="card">
     <h2>🔥 Konfluencje i okazje</h2>
     <p class="note">Kilka niezależnych sygnałów na jednym instrumencie tego samego dnia, albo spółka z Twojej listy okazji, która spadła do progu.</p>
-    {% set hot = konfluencje + (alert_groups|selectattr('kind','equalto','okazja')|map(attribute='items')|first or []) %}
+    {% set hot = konfluencje + (alert_groups|selectattr('kind','equalto','okazja')|map(attribute='rows')|first or []) %}
     {% if hot %}<div class="scroll"><table><tbody>
       {% for a in hot[:12] %}<tr><td class="l"><span class="sym">{{ a.ticker }}</span> <span class="sub">{{ a.name }}</span></td><td class="l">{{ a.headline }}</td></tr>{% endfor %}
     </tbody></table></div>{% else %}<p class="empty">Dziś bez konfluencji i okazji.</p>{% endif %}

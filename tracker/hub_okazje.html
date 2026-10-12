@@ -17,9 +17,9 @@
 </section>
 {% for g in alert_groups %}
 <section class="card">
-  <h2><span class="icon">{{ g.icon }}</span>{{ g.label }} <span class="sub">({{ g.items|length }})</span></h2>
+  <h2><span class="icon">{{ g.icon }}</span>{{ g.label }} <span class="sub">({{ g.rows|length }})</span></h2>
   <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
-    {% for a in g.items %}<tr>
+    {% for a in g.rows %}<tr>
       <td class="l sym">{{ a.ticker }}</td><td class="l">{{ a.name }}</td><td class="l">{{ a.headline }}</td><td class="wrap">{{ a.detail }}</td>
       <td class="l">{% if a.in_portfolio %}<span class="pill acc">portfel</span>{% endif %}{% if a.on_dip_list %}<span class="pill good">okazje</span>{% endif %}</td>
     </tr>{% endfor %}

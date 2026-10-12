@@ -169,11 +169,12 @@ def _context(instruments, alerts, market, signals, today, base_url) -> dict:
     for a in alert_rows:
         kinds.setdefault(a.get("kind", "?"), []).append(a)
     kind_order = ["konfluencja", "okazja", "wolumen", "ruch", "wybicie", "poziom", "trend", "smart money"]
-    alert_groups = [{"kind": k, "label": KIND_LABELS.get(k, k), "icon": KIND_ICONS.get(k, "•"), "items": kinds[k]}
+    # "rows", not "items": in a Jinja template `g.items` resolves to dict.items().
+    alert_groups = [{"kind": k, "label": KIND_LABELS.get(k, k), "icon": KIND_ICONS.get(k, "•"), "rows": kinds[k]}
                     for k in kind_order if k in kinds] + [
-                   {"kind": k, "label": k, "icon": "•", "items": v} for k, v in kinds.items() if k not in kind_order]
+                   {"kind": k, "label": k, "icon": "•", "rows": v} for k, v in kinds.items() if k not in kind_order]
     for g in alert_groups:
-        for a in g["items"]:
+        for a in g["rows"]:
             a["name"] = (by_symbol.get(a["ticker"]) or {}).get("name") or a.get("name") or a["ticker"]
 
     setups = market.get("setups", [])
