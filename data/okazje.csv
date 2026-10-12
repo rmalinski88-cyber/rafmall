@@ -1,0 +1,11 @@
+ticker,name,max_drawdown_pct,note
+# Spółki, które chcesz kupić, gdy spadną. Alert "okazja" uruchamia się, gdy kurs jest
+# co najmniej max_drawdown_pct poniżej szczytu 52 tygodni ALBO przebija w dół SMA200.
+# Wpisz własny próg na spółkę; domyślnie 20%.
+MU,Micron,20,"reel finanse_na_sterydach: 4 spółki dokupuję na spadkach (4 czerwca)"
+ASML,ASML,15,"j.w."
+NBIS,Nebius,25,"j.w.; logo N na żółtym - do potwierdzenia"
+NTNX,Nutanix,20,"j.w.; białe X - rozpoznane niepewnie, do potwierdzenia"
+NVDA,NVIDIA,15,
+TSLA,Tesla,25,
+KOID,KraneShares Humanoid ETF,15,

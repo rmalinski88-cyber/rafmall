@@ -157,6 +157,10 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 - **Hyperscalerzy**: capex na AI rośnie z ~200 mld USD (2024) do ~600+ mld (2026). Wąskie gardło to prąd i transformatory, nie chipy.
 - **Rząd USA** inwestuje bezpośrednio w spółki (Intel 8,9 mld, Korea Zinc 1,6 mld, USA Rare Earth 1,6 mld, MP Materials 400 mln) — państwowe wsparcie dla łańcucha dostaw ziem rzadkich i chipów.
 
+## Okazje zakupowe (`data/okazje.csv`) — spółki do kupienia na spadkach
+
+Reel finanse_na_sterydach „4 spółki, które dokupuję na spadkach” (4 czerwca): Micron, ASML + dwa loga: „N” na żółtym (prawdopodobnie Nebius), białe „X” (niepewne: Nutanix?). Komenda `tracker alerts` zgłosi, gdy kurs spadnie o próg z pliku poniżej szczytu 52T albo przebije SMA200 w dół.
+
 ## Portfele twórców (tylko jako sygnał, co jest popularne)
 
 - **finanse_na_sterydach**, „3 spółki, które obserwuję w sierpniu”: SoFi (SOFI, fintech), Zeta Global (ZETA, martech AI), CoreWeave (CRWV, chmura GPU). Tylko CoreWeave ma związek z AI-infrastrukturą; SoFi i Zeta nie dotyczą naszego tematu — pomijam.
