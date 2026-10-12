@@ -47,6 +47,10 @@ _INFO_MAP = {
     "price_to_book": ("priceToBook",),
     "ev_to_ebitda": ("enterpriseToEbitda",),
     "peg_ratio": ("trailingPegRatio", "pegRatio"),
+    # Instrument identity, used by the tracker to tell stocks, ETFs and crypto apart.
+    "quote_type": ("quoteType",),
+    "category": ("category",),
+    "total_assets": ("totalAssets",),
 }
 
 

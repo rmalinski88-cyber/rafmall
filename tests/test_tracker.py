@@ -1,0 +1,266 @@
+"""Tracker tests: parsers on literal documents, signal maths, and the CLI end-to-end offline."""
+
+from __future__ import annotations
+
+from datetime import date
+
+import pytest
+
+from tracker.amounts import format_range, parse_range
+from tracker.cli import main
+from tracker.funds import diff_holdings, normalise_name, resolve_tickers
+from tracker.instruments import CRYPTO, ETF, STOCK, asset_class, normalise_symbol
+from tracker.models import ADD, BUY, EXIT, HOLD, NEW, SELL, TRIM, Fund, FundReport, Holding, Trade
+from tracker.signals import build_signals, label_for
+from tracker.sources.quiver import parse_congress_rows
+from tracker.sources.sec import parse_form4, parse_info_table, select_filings
+from tracker.state import SeenStore
+
+FORM4 = """<?xml version="1.0"?>
+<ownershipDocument>
+  <issuer><issuerCik>1045810</issuerCik><issuerTradingSymbol>NVDA</issuerTradingSymbol></issuer>
+  <reportingOwner>
+    <reportingOwnerId><rptOwnerName>Huang Jen Hsun</rptOwnerName></reportingOwnerId>
+    <reportingOwnerRelationship><isDirector>1</isDirector><isOfficer>1</isOfficer>
+      <officerTitle>President and CEO</officerTitle></reportingOwnerRelationship>
+  </reportingOwner>
+  <aff10b5One>1</aff10b5One>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <securityTitle><value>Common Stock</value></securityTitle>
+      <transactionDate><value>2026-09-02</value></transactionDate>
+      <transactionCoding><transactionCode>S</transactionCode></transactionCoding>
+      <transactionAmounts><transactionShares><value>1000</value></transactionShares>
+        <transactionPricePerShare><value>200.5</value></transactionPricePerShare>
+        <transactionAcquiredDisposedCode><value>D</value></transactionAcquiredDisposedCode></transactionAmounts>
+    </nonDerivativeTransaction>
+    <nonDerivativeTransaction>
+      <securityTitle><value>Common Stock</value></securityTitle>
+      <transactionDate><value>2026-09-02</value></transactionDate>
+      <transactionCoding><transactionCode>M</transactionCode></transactionCoding>
+      <transactionAmounts><transactionShares><value>5000</value></transactionShares></transactionAmounts>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+</ownershipDocument>"""
+
+INFO_TABLE = """<?xml version="1.0"?>
+<informationTable xmlns="http://www.sec.gov/edgar/document/thirteenf/informationtable">
+  <infoTable><nameOfIssuer>APPLE INC</nameOfIssuer><cusip>037833100</cusip><value>1000</value>
+    <shrsOrPrnAmt><sshPrnamt>10</sshPrnamt></shrsOrPrnAmt></infoTable>
+  <infoTable><nameOfIssuer>APPLE INC</nameOfIssuer><cusip>037833100</cusip><value>500</value>
+    <shrsOrPrnAmt><sshPrnamt>5</sshPrnamt></shrsOrPrnAmt></infoTable>
+  <infoTable><nameOfIssuer>APPLE INC</nameOfIssuer><cusip>037833100</cusip><value>70</value>
+    <shrsOrPrnAmt><sshPrnamt>1</sshPrnamt></shrsOrPrnAmt><putCall>Put</putCall></infoTable>
+</informationTable>"""
+
+
+# -- amounts -----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("$1,001 - $15,000", (1001.0, 15000.0)),
+    ("$1,000,001 - $5,000,000", (1_000_001.0, 5_000_000.0)),
+    ("Over $50,000,000", (50_000_000.0, None)),
+    (15000, (15000.0, 15000.0)),
+    ("", (None, None)),
+    (None, (None, None)),
+])
+def test_parse_range(text, expected):
+    assert parse_range(text) == expected
+
+
+def test_format_range_keeps_suffix_dot():
+    assert format_range(1001, 15000) == "1 tys. – 15 tys. USD"
+    assert format_range(50e6, None) == "> 50 mln USD"
+
+
+# -- SEC parsers -------------------------------------------------------------
+
+
+def test_form4_keeps_only_open_market_trades():
+    trades = parse_form4(FORM4, filed=date(2026, 9, 4))
+    assert len(trades) == 1  # the option exercise (M) is mechanical, not a signal
+    t = trades[0]
+    assert (t.ticker, t.side, t.actor) == ("NVDA", SELL, "Huang Jen Hsun")
+    assert t.amount_low == pytest.approx(200_500.0)
+    assert t.planned is True
+    assert "CEO" in t.role and "Director" in t.role
+    assert t.lag_days == 2
+
+
+def test_form4_garbage_is_empty_not_crash():
+    assert parse_form4("<not xml") == []
+
+
+def test_info_table_aggregates_by_cusip_and_separates_options():
+    holdings = {(h.cusip, h.put_call): h for h in parse_info_table(INFO_TABLE, filed=date(2026, 8, 14))}
+    assert holdings[("037833100", "")].shares == 15
+    assert holdings[("037833100", "")].value == 1500
+    assert holdings[("037833100", "PUT")].shares == 1
+
+
+def test_info_table_pre_2023_values_were_thousands():
+    holdings = parse_info_table(INFO_TABLE, filed=date(2022, 11, 14))
+    assert max(h.value for h in holdings) == 1_500_000
+
+
+def test_select_filings_filters_form_and_date():
+    payload = {"filings": {"recent": {
+        "form": ["4", "10-Q", "4", "4"],
+        "accessionNumber": ["a", "b", "c", "d"],
+        "filingDate": ["2026-10-01", "2026-09-30", "2026-09-01", "2026-06-01"],
+        "reportDate": ["", "", "", ""],
+        "primaryDocument": ["x.xml", "q.htm", "y.xml", "z.xml"],
+    }}}
+    got = select_filings(payload, {"4"}, since=date(2026, 8, 1), limit=10)
+    assert [f["accession"] for f in got] == ["a", "c"]
+
+
+# -- Quiver ------------------------------------------------------------------
+
+
+def test_quiver_rows_parse_and_skip_exchanges():
+    rows = [
+        {"Representative": "Nancy Pelosi", "Ticker": "nvda", "Transaction": "Purchase",
+         "TransactionDate": "2026-09-01", "ReportDate": "2026-09-20", "Range": "$1,000,001 - $5,000,000",
+         "House": "Representatives", "Party": "D"},
+        {"Representative": "X", "Ticker": "AAPL", "Transaction": "Exchange", "ReportDate": "2026-09-20"},
+        {"Representative": "Y", "Ticker": "MSFT", "Transaction": "Sale (Partial)",
+         "TransactionDate": "2026-01-01", "ReportDate": "2026-01-10", "Range": "$1,001 - $15,000"},
+    ]
+    trades, skipped = parse_congress_rows(rows, since=date(2026, 9, 1))
+    assert skipped == 1
+    assert len(trades) == 1  # the January sale is outside the window
+    t = trades[0]
+    assert (t.ticker, t.side, t.role, t.lag_days) == ("NVDA", BUY, "D-Izba", 19)
+
+
+# -- 13F ---------------------------------------------------------------------
+
+
+def test_diff_holdings_classifies_moves():
+    prev = [Holding("A", "1", 100, 100), Holding("B", "2", 100, 100), Holding("C", "3", 100, 100),
+            Holding("D", "4", 100, 100)]
+    now = [Holding("A", "1", 150, 150), Holding("B", "2", 50, 50), Holding("C", "3", 102, 102),
+           Holding("E", "5", 10, 10)]
+    kinds = {c.cusip: c.kind for c in diff_holdings(now, prev)}
+    assert kinds == {"1": ADD, "2": TRIM, "3": HOLD, "4": EXIT, "5": NEW}
+
+
+def test_ticker_resolution_prefers_cusip_then_name():
+    holdings = [Holding("APPLE INC", "037833100", 1, 1), Holding("MICROSOFT CORP", "X", 1, 1),
+                Holding("UNKNOWN THING", "Y", 1, 1)]
+    resolved = resolve_tickers(holdings, {"037833100": "AAPL"}, {normalise_name("Microsoft Corporation"): "MSFT"})
+    assert [h.ticker for h in resolved] == ["AAPL", "MSFT", None]
+
+
+# -- signals -----------------------------------------------------------------
+
+
+def _trade(actor, side, source="congress", role="D-Izba", ticker="NVDA", planned=False):
+    return Trade(source, actor, role, ticker, side, date(2026, 9, 1), date(2026, 9, 5), 1000, 15000,
+                 planned=planned)
+
+
+def test_each_person_counts_once_per_side():
+    trades = [_trade("A", BUY), _trade("A", BUY), _trade("B", BUY)]
+    [signal] = build_signals(trades, [])
+    assert signal.score == 2.0
+    assert signal.trades == 3
+
+
+def test_ceo_purchase_outweighs_and_planned_sale_is_neutral():
+    trades = [
+        _trade("CEO", BUY, source="insider", role="Chief Executive Officer"),
+        _trade("CFO", SELL, source="insider", role="Chief Financial Officer", planned=True),
+    ]
+    [signal] = build_signals(trades, [])
+    assert signal.score == 3.0
+
+
+def test_portfolio_alert_sorts_first():
+    trades = [_trade("A", SELL, ticker="MSFT"), _trade("B", BUY, ticker="PG"), _trade("C", BUY, ticker="PG")]
+    signals = build_signals(trades, [], portfolio={"MSFT"})
+    assert signals[0].ticker == "MSFT" and signals[0].alert
+
+
+def test_fund_changes_feed_signals_but_options_do_not():
+    from tracker.models import FundChange
+
+    fund = Fund("brk", "Berkshire", "Warren Buffett", 1)
+    changes = [FundChange("APPLE", "1", "AAPL", NEW, 10, 0, 10, 0, 0.5),
+               FundChange("APPLE", "1", "AAPL", NEW, 10, 0, 10, 0, 0.5, put_call="PUT")]
+    report = FundReport(fund, None, None, None, 10, changes)
+    [signal] = build_signals([], [report])
+    assert signal.score == 2.0 and signal.buyers == {"Warren Buffett"}
+
+
+@pytest.mark.parametrize("score, label", [(3, "SILNY POPYT"), (1, "POPYT"), (0, "MIESZANE"),
+                                          (-1, "PODAŻ"), (-3, "SILNA PODAŻ")])
+def test_labels(score, label):
+    assert label_for(score) == label
+
+
+# -- instruments / state -----------------------------------------------------
+
+
+def test_symbol_normalisation():
+    assert normalise_symbol("btc") == "BTC-USD"
+    assert normalise_symbol("brk.b") == "BRK-B"
+    assert normalise_symbol("7203.T") == "7203.T"
+
+
+def test_asset_class():
+    assert asset_class("SPY", {"quote_type": "ETF"}, set()) == ETF
+    assert asset_class("ETH-USD", {}, set()) == CRYPTO
+    assert asset_class("QQQ", {}, {"QQQ"}) == ETF
+    assert asset_class("NVDA", {}, set()) == STOCK
+
+
+def test_seen_store_round_trip(tmp_path):
+    path = tmp_path / "seen.json"
+    trades = [_trade("A", BUY), _trade("B", SELL)]
+    store = SeenStore(path)
+    assert store.new(trades) == trades
+    store.remember(trades[:1])
+    store.save()
+    assert SeenStore(path).new(trades) == trades[1:]
+
+
+def test_corrupt_state_is_a_fresh_start(tmp_path):
+    path = tmp_path / "seen.json"
+    path.write_text("{broken")
+    assert SeenStore(path).keys == set()
+
+
+# -- CLI end-to-end (offline) ------------------------------------------------
+
+
+@pytest.fixture
+def offline_config(tmp_path):
+    src = open("config/tracker.yml", encoding="utf-8").read()
+    cfg = tmp_path / "tracker.yml"
+    cfg.write_text(src.replace(".cache/tracker_seen.json", str(tmp_path / "seen.json"))
+                      .replace("cache_dir: .cache", f"cache_dir: {tmp_path / 'cache'}"), encoding="utf-8")
+    return cfg
+
+
+def test_scan_writes_reports_and_then_reports_nothing_new(offline_config, tmp_path, capsys):
+    args = ["--config", str(offline_config), "--feed", "fixture", "--no-cache"]
+    out = tmp_path / "out"
+    assert main(args + ["scan", "--out-dir", str(out)]) == 0
+    html = next(out.glob("tracker_*.html")).read_text(encoding="utf-8")
+    assert "Sygnały według spółek" in html and "Fundusze" in html
+    assert next(out.glob("signals_*.json")).stat().st_size > 0
+
+    capsys.readouterr()
+    assert main(args + ["scan", "--new-only", "--no-html", "--no-quotes", "--out-dir", str(out)]) == 0
+    assert "Brak nowych transakcji" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("command", [
+    ["find", "nvid"], ["quote", "NVDA", "BTC", "SPY"], ["congress", "--side", "buy"],
+    ["insiders", "NVDA", "AAPL"], ["funds", "berkshire"],
+])
+def test_commands_run_offline(offline_config, command):
+    assert main(["--config", str(offline_config), "--feed", "fixture", "--no-cache", *command]) == 0

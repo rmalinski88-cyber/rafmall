@@ -191,7 +191,7 @@ pip install pytest
 python -m pytest tests/ -q
 ```
 
-66 testów. RSI i ATR są porównywane z niezależnymi implementacjami pętlowymi
+Testy obu narzędzi (screener + tracker). RSI i ATR są porównywane z niezależnymi implementacjami pętlowymi
 napisanymi wprost z definicji — zgodność wersji zwektoryzowanej z naiwną na
 losowych danych to najtańszy mocny dowód, że wektoryzacja jest poprawna.
 Cały pipeline jest testowany end-to-end przez deterministycznego dostawcę
@@ -212,3 +212,109 @@ Cały pipeline jest testowany end-to-end przez deterministycznego dostawcę
 
 Każdą spółkę zweryfikuj w jej sprawozdaniach finansowych przed jakąkolwiek
 decyzją.
+
+
+---
+
+# Tracker Wall Street — Kongres, insiderzy, fundusze, akcje/ETF/krypto
+
+Drugie narzędzie w repo (`python -m tracker`). Śledzi, czym handlują ludzie
+z dostępem do lepszej informacji, i zestawia to z Twoim portfelem:
+
+| Co | Skąd | Koszt |
+|---|---|---|
+| Transakcje członków Kongresu USA (STOCK Act) | Quiver Quantitative API | wymaga klucza `QUIVER_API_KEY` |
+| Transakcje insiderów spółek (Form 4) | SEC EDGAR | za darmo, bez klucza |
+| Portfele funduszy: Buffett, Dalio, Ackman, Wood, Burry (13F) | SEC EDGAR | za darmo, bez klucza |
+| Notowania akcji, ETF i krypto | Yahoo Finance (jak screener) | za darmo |
+
+```
+Quiver / SEC  →  transakcje  →  sygnały per spółka  →  dopasowanie do portfela  →  konsola + HTML + JSON
+```
+
+## Konfiguracja
+
+```bash
+pip install -r requirements.txt
+export SEC_USER_AGENT="Imię Nazwisko twoj@email.pl"   # SEC tego wymaga
+export QUIVER_API_KEY="..."                           # opcjonalnie: bez niego Kongres jest pomijany
+cp data/portfolio.example.csv data/portfolio.csv      # wpisz swoje pozycje (plik nie trafia do gita)
+python -m tracker check                               # sprawdza klucze i dostęp do źródeł
+```
+
+Pliki do edycji: `data/portfolio.csv` (Twoje pozycje), `data/watchlist.csv`
+(obserwowane akcje/ETF/krypto), `data/funds_13f.csv` (śledzone fundusze),
+`config/tracker.yml` (okna czasowe i wagi sygnałów).
+
+## Komendy
+
+```bash
+python -m tracker find nvidia               # znajdź ticker po nazwie
+python -m tracker quote NVDA SPY BTC        # karta: kurs, trend, RSI, zwroty + kto handlował
+python -m tracker congress --days 30        # co kupowali i sprzedawali kongresmeni
+python -m tracker congress --member pelosi  # transakcje jednej osoby
+python -m tracker insiders NVDA TSLA        # zakupy/sprzedaże zarządu i dyrektorów
+python -m tracker funds berkshire ark       # co zmienił Buffett i Cathie Wood w ostatnim kwartale
+python -m tracker scan                      # wszystko naraz + sygnały pod portfel + raport HTML
+python -m tracker --feed fixture scan       # to samo na danych syntetycznych, bez sieci i kluczy
+```
+
+`scan` zapisuje `out/tracker_RRRR-MM-DD.html` (raport do przeglądarki)
+i `out/signals_RRRR-MM-DD.json` (do dalszej automatyzacji).
+
+## Jak liczony jest sygnał
+
+Każda osoba lub fundusz liczy się **raz na spółkę i kierunek** — tłum
+kupujących waży więcej niż jedna duża transakcja. Wagi (`config/tracker.yml`):
+
+| Zdarzenie | Waga | Dlaczego |
+|---|---|---|
+| Zakup na rynku przez CEO/CFO/prezesa | +3 | najlepiej udokumentowany sygnał w zgłoszeniach |
+| Zakup na rynku przez innego insidera | +2 | |
+| Nowa pozycja funduszu (13F) | +2 | |
+| Zwiększenie pozycji funduszu | +1 | |
+| Kupno przez członka Kongresu | +1 | zgłoszenie bywa spóźnione nawet 45 dni |
+| Sprzedaż przez członka Kongresu | −1 | |
+| Zmniejszenie / sprzedaż całości (13F) | −1 / −2 | |
+| Sprzedaż insidera | −0,5 | zwykle podatki i dywersyfikacja |
+| Sprzedaż insidera wg planu 10b5-1 | 0 | zaplanowana z góry, nic nie mówi |
+
+Ocena: ≥ +3 *silny popyt*, ≥ +1 *popyt*, ≤ −1 *podaż*, ≤ −3 *silna podaż*.
+Pozycja z Twojego portfela z wynikiem ≤ −1 dostaje **alert portfela** i trafia
+na górę listy.
+
+Pomijane celowo: przydziały akcji, realizacja opcji, podatki i darowizny
+(Form 4 kody A/M/F/G) — to ruchy mechaniczne, nie decyzje inwestycyjne.
+
+## Rutyna co godzinę
+
+`scan --new-only` pokazuje tylko to, co pojawiło się od poprzedniego
+przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
+(dni robocze, 9–16 czasu nowojorskiego):
+
+```cron
+CRON_TZ=America/New_York
+0 9-16 * * 1-5  cd ~/rafmall && python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
+```
+
+Ten sam przebieg może uruchamiać rutyna Claude — wystarczy prompt w stylu:
+*„Uruchom `python -m tracker scan --new-only`, przeczytaj `out/signals_*.json`
+z dzisiaj i streść mi nowe transakcje oraz alerty portfela.”* Środowisko
+rutyny musi mieć dostęp sieciowy do `sec.gov`, `data.sec.gov`,
+`api.quiverquant.com` i Yahoo Finance.
+
+**Tracker nie składa zleceń.** Pokazuje, kto handlował — decyzję i zlecenie
+składasz sam u swojego brokera.
+
+## Ograniczenia trackera
+
+- **Opóźnienia są wbudowane w dane:** Kongres do 45 dni, 13F do 45 dni po
+  końcu kwartału, Form 4 do 2 dni roboczych. Kopiowanie cudzych transakcji po
+  fakcie nie daje ich wyników.
+- 13F pokazuje tylko długie pozycje w akcjach USA na koniec kwartału — bez
+  shortów, gotówki i transakcji w trakcie kwartału.
+- Tickery w 13F są dopasowywane po CUSIP (`data/cusip_tickers.csv`) i po
+  nazwie emitenta; niedopasowane pozycje mają tylko nazwę.
+- Format API Quiver bywa zmieniany — wiersze, których nie da się odczytać,
+  są pomijane i raportowane w ostrzeżeniach, nigdy zgadywane.
+- To nie jest rekomendacja inwestycyjna.

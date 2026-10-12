@@ -1,0 +1,6 @@
+ticker,quantity,avg_price,note
+# Skopiuj do data/portfolio.csv i wpisz swoje pozycje. data/portfolio.csv jest w .gitignore.
+NVDA,10,120.00,
+MSFT,5,400.00,
+SPY,3,550.00,
+BTC-USD,0.05,60000,

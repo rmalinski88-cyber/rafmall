@@ -1,0 +1,46 @@
+# Tracker transakcji Wall Street - konfiguracja.
+#
+# Klucze i dane kontaktowe NIE trafiają do tego pliku - ustaw je jako zmienne
+# środowiskowe:
+#   export SEC_USER_AGENT="Imię Nazwisko twoj@email.pl"   # wymagane przez SEC
+#   export QUIVER_API_KEY="..."                           # transakcje Kongresu
+
+feed: live                 # live = SEC EDGAR + Quiver; fixture = dane syntetyczne offline
+price_provider: yahoo      # notowania akcji/ETF/krypto (jak w screenerze)
+
+portfolio: data/portfolio.csv            # Twoje pozycje (plik prywatny, w .gitignore)
+portfolio_example: data/portfolio.example.csv
+watchlist: data/watchlist.csv
+funds: data/funds_13f.csv
+cusip_map: data/cusip_tickers.csv
+
+cache_dir: .cache
+fresh_cache_hours: 0.5     # indeksy zgłoszeń - krótko, żeby skan co godzinę widział nowe
+state_file: .cache/tracker_seen.json
+
+# Okna czasowe (dni wstecz, liczone od daty zgłoszenia).
+congress_days: 30
+insider_days: 30
+insider_max_filings: 40    # max. formularzy Form 4 na spółkę w jednym przebiegu
+insider_max_tickers: 40    # max. spółek sprawdzanych pod kątem insiderów w skanie
+
+# 13F: zmiana liczby akcji mniejsza niż 5% = "bez zmian".
+fund_min_change: 0.05
+
+# Wyszukiwarka / notowania.
+lookback_days: 420
+benchmark: SPY
+known_etfs: [SPY, QQQ, VOO, VTI, IWM, DIA, ARKK, XLK, XLF, XLE, SMH, SOXX, GLD, TLT, EEM, VEA, SCHD, IBIT]
+
+# Wagi sygnału: każda osoba/fundusz liczy się raz na spółkę i kierunek.
+signal_weights:
+  insider_buy_csuite: 3.0    # zakup na rynku przez CEO/CFO/prezesa - najsilniejszy sygnał
+  insider_buy: 2.0
+  insider_sell: -0.5         # sprzedaże insiderów to często podatki i dywersyfikacja
+  insider_sell_planned: 0.0  # sprzedaż wg z góry ustalonego planu 10b5-1
+  congress_buy: 1.0
+  congress_sell: -1.0
+  fund_new: 2.0
+  fund_add: 1.0
+  fund_trim: -1.0
+  fund_exit: -2.0

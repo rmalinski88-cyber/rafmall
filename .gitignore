@@ -7,3 +7,4 @@ out/*.csv
 out/*.html
 .pytest_cache/
 .DS_Store
+data/portfolio.csv

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracker Wall Street</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 16px 72px; }
+
+  header h1 { font-size: 1.6rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header .meta { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
+  header .meta b { color: var(--text-primary); font-weight: 600; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .card .note { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 18px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .v { font-size: 1.75rem; font-weight: 650; margin-top: 2px; }
+  .tile .s { font-size: 0.8rem; color: var(--text-muted); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; background: var(--surface-1); }
+  th:first-child, td:first-child,
+  th.left, td.left { text-align: left; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: color-mix(in srgb, var(--series-1) 7%, transparent); }
+  .rank { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tick-name { font-weight: 600; }
+  .sub { color: var(--text-muted); font-size: 0.78rem; font-weight: 400; }
+  .scorecell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .scorecell .v { font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; font-weight: 600; }
+  svg.bar, svg.spark { display: block; }
+
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    fill: var(--text-muted);
+  }
+
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--border); color: var(--text-secondary); }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.85rem; }
+  ul.plain li { margin-bottom: 4px; }
+  .empty { color: var(--text-muted); font-style: italic; }
+
+  .disclaimer { border-left: 3px solid var(--warning); padding-left: 14px; margin-top: 28px; color: var(--text-secondary); font-size: 0.85rem; }
+  .disclaimer b { color: var(--text-primary); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 16px 48px; }
+    header h1 { font-size: 1.3rem; }
+  }
+</style>
+<style>
+  .tone-good { color: var(--good); font-weight: 600; }
+  .tone-bad { color: var(--critical); font-weight: 600; }
+  .tone-neutral { color: var(--text-secondary); }
+  .new-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--series-1); }
+  .pill.alert { border-color: var(--critical); color: var(--critical); }
+  .pill.port { border-color: var(--series-1); color: var(--series-1); }
+  td.wrap-text { white-space: normal; min-width: 280px; text-align: left; color: var(--text-secondary); font-size: 0.8rem; }
+  nav.jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  nav.jump a { color: var(--series-1); text-decoration: none; font-size: 0.85rem; }
+  .table-cap { max-height: 560px; overflow: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Tracker Wall Street — kongres, insiderzy, fundusze</h1>
+    <p class="meta">
+      Data: <b>{{ run_date }}</b> · Źródło: <b>{{ feed }}</b> ·
+      Kongres: ostatnie <b>{{ congress_days }}</b> dni · Insiderzy: ostatnie <b>{{ insider_days }}</b> dni
+    </p>
+    <nav class="jump">
+      <a href="#sygnaly">Sygnały</a> · <a href="#notowania">Notowania</a> · <a href="#kongres">Kongres</a> ·
+      <a href="#insiderzy">Insiderzy</a> · <a href="#fundusze">Fundusze 13F</a>
+    </nav>
+  </header>
+
+  <div class="tiles">
+    {% for tile in tiles %}
+    <div class="tile"><div class="k">{{ tile.label }}</div><div class="v">{{ tile.value }}</div><div class="s">{{ tile.sub }}</div></div>
+    {% endfor %}
+  </div>
+
+  <section class="card" id="sygnaly">
+    <h2>Sygnały według spółek</h2>
+    <p class="note">
+      Każda osoba lub fundusz liczy się raz na spółkę i kierunek. Zakup na rynku przez CEO/CFO waży najwięcej,
+      sprzedaż insidera mało (podatki, dywersyfikacja), sprzedaż wg planu 10b5-1 — wcale.
+      Na górze pozycje z Twojego portfela.
+    </p>
+    {% if signals %}
+    <div class="scroll table-cap"><table>
+      <thead><tr><th class="left">Ticker</th><th>Wynik</th><th class="left">Ocena</th><th>Kupujący</th><th>Sprzedający</th><th>Kupno ~</th><th>Sprzedaż ~</th><th class="left">Dlaczego</th></tr></thead>
+      <tbody>
+      {% for s in signals %}
+        <tr>
+          <td class="left"><span class="tick-name">{{ s.ticker }}</span>
+            {% if s.alert %}<span class="pill alert">alert portfela</span>{% elif s.in_portfolio %}<span class="pill port">portfel</span>{% elif s.on_watchlist %}<span class="pill">obserwowane</span>{% endif %}</td>
+          <td class="num tone-{{ s.tone }}">{{ s.score }}</td>
+          <td class="left tone-{{ s.tone }}">{{ s.label }}</td>
+          <td class="num">{{ s.buyers }}</td><td class="num">{{ s.sellers }}</td>
+          <td class="num">{{ s.buy_usd }}</td><td class="num">{{ s.sell_usd }}</td>
+          <td class="wrap-text">{{ s.reasons[:4]|join("; ") }}{% if s.reasons|length > 4 %} … (+{{ s.reasons|length - 4 }}){% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="empty">Brak transakcji w oknie czasowym.</p>{% endif %}
+  </section>
+
+  <section class="card" id="notowania">
+    <h2>Notowania — portfel i obserwowane</h2>
+    <p class="note">Akcje i ETF porównywane z SPY, krypto z BTC. Linia = ostatnie 12 miesięcy.</p>
+    {% if quotes %}
+    <div class="scroll"><table>
+      <thead><tr><th class="left">Symbol</th><th class="left">Typ</th><th>Kurs</th><th class="left">Trend</th><th>1M</th><th>12M</th><th>RSI</th><th>vs SMA200</th><th class="left">12M</th></tr></thead>
+      <tbody>
+      {% for q in quotes %}
+        {% if q.error %}
+        <tr><td class="left"><span class="tick-name">{{ q.symbol }}</span></td><td class="left" colspan="8"><span class="empty">{{ q.error }}</span></td></tr>
+        {% else %}
+        <tr>
+          <td class="left"><div class="tick-name">{{ q.symbol }}</div><div class="sub">{{ q.name }}</div></td>
+          <td class="left"><span class="pill">{{ q.kind }}</span></td>
+          <td class="num">{{ q.last }}</td><td class="left">{{ q.trend }}</td>
+          <td class="num">{{ q.ret_1m }}</td><td class="num">{{ q.ret_12m }}</td>
+          <td class="num">{{ q.rsi }}</td><td class="num">{{ q.sma200 }}</td>
+          <td class="left">{{ q.spark }}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="empty">Notowania pominięte w tym przebiegu.</p>{% endif %}
+  </section>
+
+  {% for block in [("kongres", "Kongres USA (STOCK Act)", congress, "Członkowie Kongresu mają do 45 dni na zgłoszenie transakcji — kolumna „Opóźn.” pokazuje, jak stara była informacja w chwili publikacji. Kwoty to przedziały, nie dokładne wartości."),
+                   ("insiderzy", "Insiderzy (SEC Form 4)", insiders, "Tylko zakupy (kod P) i sprzedaże (kod S) na otwartym rynku. Przydziały akcji, realizacja opcji i podatki są pominięte jako mechaniczne.")] %}
+  <section class="card" id="{{ block[0] }}">
+    <h2>{{ block[1] }} ({{ block[2]|length }})</h2>
+    <p class="note">{{ block[3] }} <span class="new-dot"></span> = nowe od poprzedniego skanu.</p>
+    {% if block[2] %}
+    <div class="scroll table-cap"><table>
+      <thead><tr><th class="left"></th><th class="left">Ticker</th><th class="left">Strona</th><th class="left">Kto</th><th class="left">Rola</th><th>Kwota</th><th>Transakcja</th><th>Zgłoszenie</th><th>Opóźn.</th></tr></thead>
+      <tbody>
+      {% for t in block[2] %}
+        <tr>
+          <td class="left">{% if t.new %}<span class="new-dot"></span>{% endif %}</td>
+          <td class="left tick-name">{{ t.ticker }}</td>
+          <td class="left tone-{{ t.tone }}">{{ t.side }}{% if t.planned %} <span class="sub">10b5-1</span>{% endif %}</td>
+          <td class="left">{{ t.actor }}</td><td class="left sub">{{ t.role }}</td>
+          <td class="num">{{ t.amount }}</td><td class="num">{{ t.traded }}</td><td class="num">{{ t.reported }}</td><td class="num">{{ t.lag }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<p class="empty">Brak transakcji (albo źródło wyłączone — patrz ostrzeżenia).</p>{% endif %}
+  </section>
+  {% endfor %}
+
+  <section class="card" id="fundusze">
+    <h2>Fundusze — zmiany w portfelach 13F</h2>
+    <p class="note">13F to stan na koniec kwartału, publikowany do 45 dni później. To obraz z przeszłości, nie bieżące transakcje.</p>
+    {% for f in funds %}
+      <h3 style="margin: 18px 0 2px; font-size: 0.95rem;">{{ f.name }} <span class="sub">— {{ f.manager }}</span></h3>
+      <p class="note" style="margin-bottom: 8px;">Stan na {{ f.period or dash }} (zgłoszono {{ f.filed or dash }}), porównanie z {{ f.prev or dash }} · portfel 13F {{ f.total }}</p>
+      {% if f.rows %}
+      <div class="scroll"><table>
+        <thead><tr><th class="left">Zmiana</th><th class="left">Ticker</th><th class="left">Emitent</th><th>Wartość</th><th>Udział</th><th>Δ akcji</th></tr></thead>
+        <tbody>
+        {% for c in f.rows %}
+          <tr><td class="left tone-{{ c.tone }}">{{ c.kind }}</td><td class="left tick-name">{{ c.ticker }}</td><td class="left">{{ c.issuer }}</td>
+              <td class="num">{{ c.value }}</td><td class="num">{{ c.weight }}</td><td class="num">{{ c.delta }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<p class="empty">Bez istotnych zmian względem poprzedniego kwartału.</p>{% endif %}
+    {% else %}<p class="empty">Brak danych 13F.</p>{% endfor %}
+  </section>
+
+  {% if warnings %}
+  <section class="card">
+    <h2>Ostrzeżenia z przebiegu ({{ warnings|length }})</h2>
+    <ul class="plain">{% for w in warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  <p class="disclaimer">
+    <b>To nie jest rekomendacja inwestycyjna.</b>
+    Narzędzie zbiera publiczne zgłoszenia (STOCK Act, SEC Form 4, SEC 13F) i liczy prosty bilans kupujących
+    i sprzedających. Zgłoszenia są opóźnione: Kongres do 45 dni, 13F do 45 dni po końcu kwartału.
+    Naśladowanie cudzych transakcji po fakcie nie gwarantuje ich wyników. Każdą decyzję podejmujesz sam.
+  </p>
+
+</div>
+</body>
+</html>
