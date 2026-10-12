@@ -1,9 +1,28 @@
-# Screener robotyki humanoidalnej — rynki azjatyckie
+# rafmall — narzędzie rynkowe do rafmall.ch
 
-Narzędzie CLI, które ocenia spółki z sektora robotyki humanoidalnej notowane
-w Tokio, Seulu, Tajpej, Hongkongu i na giełdach kontynentalnych Chin —
-jednocześnie **fundamentalnie** i **technicznie** — a następnie układa je
-w ranking i generuje raport HTML.
+Dwie rzeczy, liczone codziennie na prawdziwych danych na serwerach GitHuba
+i publikowane jako strony pod https://rmalinski88-cyber.github.io/rafmall/
+(do osadzenia w Lovable):
+
+1. **Wyszukiwanie akcji, ETF i krypto** — `szukaj.html` + `api/instruments.json`:
+   kurs, trend, EMA30, zwroty, wolumen; listy robotyki, surowców, energii, ETF,
+   krypto, okazji i Portfela Trumpa.
+2. **Okazje handlowe** — `okazje.html`: nagłe wzrosty wolumenu i ruchy cen,
+   setupy na całym rynku USA i krypto (`pullback` do EMA30 jak ARB 26 sie 2026,
+   `ema30` + 3 sesje), okazje zakupowe; `inwestorzy.html`: Kongres, insiderzy
+   (SEC), fundusze 13F, Portfel Trumpa. Alerty na Discord.
+
+Jak to uruchomić i co kliknąć raz: **`START.md`**. Poniżej opis części
+składowych: screener (ranking spółek) i tracker (alerty, skan rynku, inwestorzy).
+
+---
+
+# Screener — ranking spółek z list
+
+Narzędzie CLI, które ocenia spółki z list w `data/` (robotyka humanoidalna na
+całym świecie, surowce, energia, inne tematy) — jednocześnie
+**fundamentalnie** i **technicznie** — a następnie układa je w ranking
+i generuje raport HTML.
 
 ```
 python -m screener run
@@ -448,8 +467,15 @@ przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
 `.github/workflows/rafmall.yml` uruchamia te same komendy na serwerach GitHuba, na
 prawdziwych danych: `alerts` co godzinę w sesji USA, `market` i `scan` po sesji
 (dni robocze). Ręcznie: GitHub → Actions → rafmall → Run workflow → wybierz zadanie
-(`check`, `alerts`, `market`, `scan`, `screener`, `site`). Raporty z `out/` są do
+(`check`, `first_run`, `alerts`, `market`, `scan`, `screener`, `site`, `peek` —
+podgląd strony WWW, `dump` — notowania do `data/samples/`). Raporty z `out/` są do
 pobrania przy każdym przebiegu (Artifacts, 14 dni).
+
+`.github/workflows/pages.yml` buduje narzędzie online (hub: `index`, `szukaj`,
+`okazje`, `inwestorzy`, `roboty`, `api/*.json`) dwa razy dziennie i po każdym
+pushu do `main`, i publikuje je na gałęzi `gh-pages` → GitHub Pages.
+Sesja Claude w chmurze bez sieci uruchamia te przebiegi przez API GitHuba i czyta
+ich logi (`CLAUDE.md`, „Dane i sieć”).
 
 Klucze wpisujesz raz w GitHub → Settings → Secrets and variables → Actions, pod tymi
 samymi nazwami co w `.env`: `SEC_USER_AGENT`, `QUIVER_API_KEY`, `DISCORD_WEBHOOK_URL`,

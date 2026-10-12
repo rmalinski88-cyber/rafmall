@@ -22,3 +22,12 @@ commands_verified: "mcp github get_job_logs job 114937846805 — run, zwróciło
 **Suggested improvement:** W `CLAUDE.md` (sekcja „Dane i sieć") jedno zdanie: sesja chmurowa uruchamia workflow i czyta log zadania przez API (nazwy narzędzi). Zrobione w tej sesji. Dla przyszłych sesji: zanim poprosisz użytkownika o zmianę ustawień środowiska, sprawdź, czy repo ma workflow, który zrobi to samo na runnerze GitHuba, i czy masz narzędzia do jego wyzwolenia i odczytu.
 
 **Principle:** Gdy środowisko sesji nie ma dostępu do zasobu, najpierw szukaj drogi przez zasoby, które sesja już ma (API GitHuba, runnery CI), a dopiero potem proś użytkownika o zmianę konfiguracji — dla użytkownika nietechnicznego zmiana ustawień jest kosztem wyższym niż dla sesji jedno dodatkowe zapytanie.
+
+## Instancja 2 (ta sama sesja, później)
+
+Odczyt CSV z logu zadania `dump`: ostrzeżenie yfinance z stderr („$TIA22861-USD: No data
+found”) wylądowało w środku bloku `=== DUMP ARB11841-USD BEGIN/END`, bo stdout runnera jest
+buforowany blokowo, a stderr nie. Skutek: `pd.to_datetime` wywróciło replay na próbce.
+Reguła dla każdego odczytu danych strukturalnych z logu: nadawca robi `flush` po każdym bloku,
+odbiorca filtruje wiersze wzorcem (tu `^\d{4}-\d{2}-\d{2},`), nigdy nie ufa granicom bloku.
+Poprawione w `tracker/cli.py` (`flush=True`) i w parserze sesji.
