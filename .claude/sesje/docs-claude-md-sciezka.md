@@ -11,4 +11,4 @@
 - Brak.
 
 ## Uwaga dla innych sesji
-- Obserwacje 0002 (hook w `settings.proposed.json`) i 0003 są nadal otwarte.
+- Otwarta jest już tylko obserwacja 0003 (czeka na przegląd).

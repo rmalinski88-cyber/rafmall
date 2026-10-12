@@ -95,7 +95,6 @@ Workspace skilla jest w repo, więc obserwacje wędrują z gitem:
   Gdy repo zostało dołączone w trakcie sesji, protokół startowy wykonaj od razu po
   pojawieniu się tego pliku w kontekście.
 
-
 Poniższy blok aktywacyjny pochodzi z `references/environments.md` skilla. `[ABSOLUTE PATH]`
 oznacza ścieżkę roboczą z listy wyżej, `[PROJECTS ROOT]` odpowiadający jej katalog nadrzędny.
 

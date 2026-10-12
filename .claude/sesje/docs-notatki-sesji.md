@@ -12,7 +12,4 @@
 - Brak. Kolejne sesje zakładają własne pliki według szablonu.
 
 ## Uwaga dla innych sesji
-- Czeka na decyzję użytkownika: `.claude/settings.proposed.json` nie jest jeszcze
-  zastosowany jako `.claude/settings.json` (obserwacja 0002 w logu Task Observera).
-- `CLAUDE.md` nadal podaje dla chmury ścieżkę `/home/user/rafmall` (obserwacja 0001);
-  używaj wyniku `git rev-parse --show-toplevel`.
+- Brak. Obie sprawy opisane tu wcześniej są załatwione (obserwacje 0001 i 0002 mają status `actioned`).
