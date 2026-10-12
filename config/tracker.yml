@@ -1,9 +1,7 @@
 # Tracker transakcji Wall Street - konfiguracja.
 #
-# Klucze i dane kontaktowe NIE trafiają do tego pliku - ustaw je jako zmienne
-# środowiskowe:
-#   export SEC_USER_AGENT="Imię Nazwisko twoj@email.pl"   # wymagane przez SEC
-#   export QUIVER_API_KEY="..."                           # transakcje Kongresu
+# Klucze i dane kontaktowe NIE trafiają do tego pliku. Wpisz je do pliku .env
+# (wzór: .env.example) - tracker wczytuje go sam przy każdym uruchomieniu.
 
 feed: live                 # live = SEC EDGAR + Quiver; fixture = dane syntetyczne offline
 price_provider: yahoo      # notowania akcji/ETF/krypto (jak w screenerze)
@@ -16,6 +14,7 @@ cusip_map: data/cusip_tickers.csv
 
 cache_dir: .cache
 fresh_cache_hours: 0.5     # indeksy zgłoszeń - krótko, żeby skan co godzinę widział nowe
+price_cache_hours: 1       # notowania - godzina, żeby alerts co godzinę widziało świeży wolumen
 state_file: .cache/tracker_seen.json
 
 # Okna czasowe (dni wstecz, liczone od daty zgłoszenia).
@@ -70,13 +69,13 @@ market_lookback_days: 200
 # obejmuje też Europę i Azję. Gdy TV zawiedzie, skan sam wraca do SEC.
 market_source: tradingview
 market_tv_market: america     # america | global | germany | japan | poland | crypto
-market_crypto: true           # dołącz krypto (screener TV 'crypto' albo data/crypto.csv)
+market_crypto: true           # dołącz krypto (screener TV 'crypto' albo lista zapasowa)
+crypto_list: data/crypto.csv
 market_state_file: .cache/tracker_market_seen.json
 market_rules:
   ema_len: 30                   # przebicie EMA30 na świecach dziennych
   hold_days: 3                  # ...i utrzymanie nad nią przez 3 sesje
   volume_multiple: 2.0          # wolumen >= 2x średnia 20 sesji sprzed przebicia
-  max_hold_days: 6              # starsze przebicia to już nie "początek ruchu"
   # Reguła "pullback" (przykład ARB 26 sie 2026): impuls z wolumenem przez EMA30,
   # korekta do rosnącej EMA bez jej przebicia, wejście na pierwszej świecy w górę.
   pullback_max_age: 15          # impuls nie starszy niż 15 sesji

@@ -181,7 +181,23 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 
 ---
 
-## Pytania do Rafała
+## Tickery do sprawdzenia na komputerze (`validate` pokaże, które nie działają)
+
+MOG-A, SKF-B.ST, 300660.SZ (JL MAG), SHA0.DE (Schaeffler), AMS.SW, 688017.SS (Leaderdrive),
+9880.HK (UBTech), 277810.KQ, 454910.KS, 108490.KQ, 056080.KQ, KGH.WA, BOL.ST, NST.AX,
+B (Barrick), KOID, HUMN, RBOT, URNM, NTNX, GFS, SNDK; benchmark WIG20.WA.
+Bez tickera (sprawdzić, czy notowane): USA Rare Earth, Vulcan Elements, Korea Zinc (010130.KS?),
+Best Drive, Jinxu, Leili, „Ampus Technologies”, SPCX, ETF „WIRE”.
+
+## Pytania do Rafała (odpowiedziane → decyzje w START.md §3)
+
+- [x] Hosting: własny → plik `roboty.html` + `scripts/publish.py` (FTP)
+- [x] Powiadomienia: Discord
+- [x] Krypto: tak, w skanie rynku i alertach
+- [x] Zasięg skanu: cały rynek, nie tylko listy
+- [x] TradingView: Premium → wskaźnik + webhook
+
+## Pytania wciąż otwarte
 
 - [x] Screen z „1” (pierwsza paczka): tak, Moog — potwierdzone drugim reelem
 - [x] Warstwa 2: domyślnie NA STRONIE jako sekcja „Energia” (do odwołania)
@@ -189,7 +205,7 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 - [x] ETF-y złoto/srebro/uran: domyślnie NA STRONIE w grupie „makro” (do odwołania)
 - [x] Hosting rafmall.ch: własny hosting → strona jako plik `roboty.html` do wgrania
 - [ ] HTML strony z Lovable (do dopasowania wyglądu)
-- [ ] Które spółki są w portfelu, a które tylko obserwowane?
+- [ ] **Portfel** — `data/portfolio.csv` (najważniejsze: bez tego alerty nie priorytetyzują)
 
 ## Zasady od Rafała
 

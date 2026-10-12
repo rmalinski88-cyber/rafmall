@@ -140,6 +140,8 @@ python -m screener --universe data/universe_humanoid_global.csv site --out out/s
 python -m screener --universe data/universe_humanoid_global.csv site --signals out/signals_2026-10-12.json
 ```
 
+`python scripts/publish.py` wgrywa gotowy plik na hosting przez FTP (dane w `.env`).
+
 `site` tworzy jeden samodzielny plik HTML (bez zależności zewnętrznych) z
 wyszukiwarką, filtrem rynku i segmentami: Humanoidy / Podzespoły /
 Integratorzy / Platforma i AI. `data/universe_humanoid_global.csv` to lista
@@ -248,11 +250,15 @@ Quiver / SEC  →  transakcje  →  sygnały per spółka  →  dopasowanie do p
 
 ```bash
 pip install -r requirements.txt
-export SEC_USER_AGENT="Imię Nazwisko twoj@email.pl"   # SEC tego wymaga
-export QUIVER_API_KEY="..."                           # opcjonalnie: bez niego Kongres jest pomijany
+cp .env.example .env                                  # SEC_USER_AGENT, QUIVER_API_KEY, DISCORD_WEBHOOK_URL, FTP_*
 cp data/portfolio.example.csv data/portfolio.csv      # wpisz swoje pozycje (plik nie trafia do gita)
 python -m tracker check                               # sprawdza klucze i dostęp do źródeł
+python scripts/first_run.py                           # pierwsze uruchomienie: wszystko po kolei + log
 ```
+
+Klucze czytane są z `.env` automatycznie (bez `export`, działa też na Windows).
+Bez `SEC_USER_AGENT` działa wszystko poza insiderami i 13F. Pełny briefing
+na pierwsze uruchomienie: `START.md`.
 
 Pliki do edycji: `data/portfolio.csv` (Twoje pozycje), `data/watchlist.csv`
 (obserwowane akcje/ETF/krypto), `data/funds_13f.csv` (śledzone fundusze),
@@ -324,8 +330,8 @@ Alerty z portfela idą pierwsze, potem okazje, potem konfluencje, potem reszta w
 Każdy alert zgłaszany jest raz (stan w `.cache/tracker_alerts_seen.json`).
 
 **Discord:** w ustawieniach kanału → Integracje → Webhooki → Nowy webhook →
-skopiuj adres i ustaw `export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."`.
-Bez tej zmiennej `--discord` tylko informuje, że nic nie wysłał.
+skopiuj adres do `.env` jako `DISCORD_WEBHOOK_URL`. Bez tej zmiennej
+`--discord` tylko informuje, że nic nie wysłał.
 
 **Czego nie wykryje:** reeli influencerów. Instagram nie ma API. Ślad po nich
 to zwykle skok wolumenu bez wyników i bez komunikatu spółki — to wyłapie reguła „wolumen”.
@@ -356,6 +362,10 @@ Druga, prostsza reguła `ema30` (`--rule ema30`):
 2. zamyka się nad nią przez **3 kolejne sesje**,
 3. w dniu przebicia lub podczas utrzymania wolumen ≥ **2× średnia** z 20 sesji sprzed przebicia.
 
+**Test akceptacyjny reguły:** `python -m tracker replay ARB-USD --rule pullback --days 120`
+odtwarza regułę dzień po dniu na historii i wypisuje, kiedy by odpaliła.
+Tak sprawdzasz, czy skaner znalazłby to, co znalazłeś ręcznie.
+
 Każdy sygnał pojawia się raz. Odfiltrowane są spółki poniżej 2 USD i z obrotem
 poniżej 2 mln USD dziennie (krypto: tylko obrót). Progi w `config/tracker.yml`
 → `market_rules`. Krypto: screener TV `crypto` (pary USD/USDT, jedna na monetę),
@@ -384,10 +394,10 @@ przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
 (dni robocze, 9–16 czasu nowojorskiego):
 
 ```cron
-CRON_TZ=America/New_York
-0 9-16 * * 1-5  cd ~/rafmall && python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
-30 9-16 * * 1-5 cd ~/rafmall && python -m tracker alerts --discord >> out/alerts.log 2>&1
-0 17 * * 1-5    cd ~/rafmall && python -m tracker market --discord >> out/market.log 2>&1
+# czas CET; sesja USA 15:30–22:00
+0  16-22 * * 1-5  cd ~/rafmall && .venv/bin/python -m tracker alerts --discord >> out/alerts.log 2>&1
+40 22    * * 1-5  cd ~/rafmall && .venv/bin/python -m tracker market --discord >> out/market.log 2>&1
+50 22    * * 1-5  cd ~/rafmall && .venv/bin/python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
 ```
 
 Ten sam przebieg może uruchamiać rutyna Claude — wystarczy prompt w stylu:

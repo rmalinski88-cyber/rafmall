@@ -27,6 +27,17 @@ nic wpisywać w polu „Wiadomość”.
 Powtórz dla każdego symbolu, który chcesz pilnować w czasie rzeczywistym.
 Premium daje 400 alertów, więc portfel + okazje spokojnie się mieszczą.
 
+## Które symbole (propozycja)
+
+Interwał **1D**. Alert per symbol, „Dowolna funkcja alert()”, webhook Discorda:
+
+- portfel — wszystko z `data/portfolio.csv`,
+- okazje — MU, ASML, NBIS, NVDA, TSLA, KOID (+ NTNX, jeśli potwierdzisz „X” z reela),
+- krypto — ARB/USDT (Binance), BTC, ETH, SOL.
+
+Reszta list (141 instrumentów) zostaje w bocie co godzinę — tam nie trzeba
+klikać alertów ręcznie.
+
 ## Co jest wspólne z botem, a co inne
 
 | | bot (`tracker alerts`) | TradingView |

@@ -474,3 +474,52 @@ def test_tradingview_crypto_symbol_mapping():
 
     assert to_yahoo("ARBUSDT", "BINANCE") == "ARB-USD"
     assert to_yahoo("BTCUSD", "COINBASE") == "BTC-USD"
+
+
+# -- env / replay ------------------------------------------------------------
+
+
+def test_dotenv_sets_missing_only(tmp_path, monkeypatch):
+    from tracker.env import load_dotenv
+
+    env = tmp_path / ".env"
+    env.write_text('A_TEST_KEY="hello world"\n# comment\nexport B_TEST_KEY=1\nC_TEST_KEY=keep\n', encoding="utf-8")
+    monkeypatch.setenv("C_TEST_KEY", "already")
+    monkeypatch.delenv("A_TEST_KEY", raising=False)
+    monkeypatch.delenv("B_TEST_KEY", raising=False)
+    assert load_dotenv(env) == 2
+    import os
+    assert os.environ["A_TEST_KEY"] == "hello world" and os.environ["B_TEST_KEY"] == "1"
+    assert os.environ["C_TEST_KEY"] == "already"
+
+
+def test_replay_command_runs_offline(offline_config, capsys):
+    assert main(["--config", str(offline_config), "--feed", "fixture", "--no-cache",
+                 "replay", "ARB", "--rule", "pullback", "--days", "60"]) == 0
+    out = capsys.readouterr().out
+    assert "ARB-USD" in out and "reguła pullback" in out
+
+
+def test_pullback_fires_once_per_setup():
+    """After the entry bar, more up-closes must not re-trigger the same setup."""
+    from tracker.market import DEFAULTS, ema_pullback_entry
+
+    frame = _arb_like_frame()
+    assert ema_pullback_entry("A", "A", frame, DEFAULTS) is not None
+    import pandas as pd
+    nxt = frame.iloc[-1].copy()
+    nxt[["open", "close"]] = frame["close"].iloc[-1] * 1.02
+    nxt["high"], nxt["low"] = nxt["close"] * 1.01, nxt["close"] * 0.99
+    frame2 = pd.concat([frame, pd.DataFrame([nxt], index=[frame.index[-1] + pd.offsets.BDay()])])
+    assert ema_pullback_entry("A", "A", frame2, DEFAULTS) is None
+
+
+def test_live_feed_without_sec_user_agent_degrades_gracefully(monkeypatch):
+    from datetime import date
+    from tracker.sources.live import LiveFeed
+
+    monkeypatch.delenv("SEC_USER_AGENT", raising=False)
+    feed = LiveFeed({}, fresh_cache=None, archive_cache=None)   # must not raise
+    assert feed.insider_trades("NVDA", date(2026, 1, 1)) == []
+    assert feed.all_names() == [] and feed.search_names("nvda") == []
+    assert len(feed.warnings) == 1 and "SEC" in feed.warnings[0]

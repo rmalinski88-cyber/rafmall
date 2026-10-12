@@ -119,3 +119,6 @@ class FixtureFeed(TradeFeed):
         from .live import search_ticker_map
 
         return search_ticker_map({t: (0, n) for t, n in _TICKERS.items()}, text, limit)
+
+    def all_names(self) -> list[tuple[str, str]]:
+        return sorted(_TICKERS.items())

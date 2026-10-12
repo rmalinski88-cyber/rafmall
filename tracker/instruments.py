@@ -16,6 +16,7 @@ STOCK, ETF, CRYPTO = "akcja", "ETF", "krypto"
 CRYPTO_ALIASES = {
     "BTC", "ETH", "SOL", "XRP", "BNB", "ADA", "DOGE", "AVAX", "DOT", "LINK",
     "LTC", "TRX", "TON", "SHIB", "MATIC", "POL", "SUI", "NEAR", "ATOM", "UNI",
+    "ARB", "OP", "APT", "INJ", "TIA", "SEI", "RENDER", "FET", "TAO", "HBAR", "XLM", "PEPE",
 }
 
 _QUOTE_TYPES = {"EQUITY": STOCK, "ETF": ETF, "MUTUALFUND": ETF, "CRYPTOCURRENCY": CRYPTO}

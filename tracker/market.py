@@ -23,7 +23,6 @@ DEFAULTS = {
     "volume_window": 20,
     "min_avg_dollar_volume": 2_000_000,  # liquidity floor, USD/day
     "min_price": 2.0,        # skip penny stocks
-    "max_hold_days": 6,      # a break older than this is not "starting" any more
     "pullback_max_age": 15,  # impulse must be within this many bars
     "pullback_pct": 0.03,    # low within 3% above the EMA (or under it) counts as a touch
     "impulse_atr_multiple": 1.5,
@@ -71,8 +70,8 @@ def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
     line = ema(close, cfg["ema_len"])
     above = (close > line).to_numpy()
 
-    # The hold must end today and be exactly `hold` long, or longer but not
-    # older than max_hold_days: we want the start of a move, not its middle.
+    # The run of closes above the EMA must end today and be exactly `hold`
+    # long, so the setup is reported once, on the day it is confirmed.
     if not above[-hold:].all():
         return None
     run = 0
@@ -80,7 +79,7 @@ def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         if not flag:
             break
         run += 1
-    if run > cfg["max_hold_days"] or run >= n:
+    if run != hold:
         return None
     break_idx = n - run  # first bar of the run = the break bar
     if above[break_idx - 1]:
@@ -164,6 +163,11 @@ def ema_pullback_entry(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
     gap = (low.iloc[seg] / line.iloc[seg] - 1.0)
     if gap.empty or float(gap.min()) > zone:
         return None  # never came back to the average: no correction, just a run-up
+    # Report once: today must be the FIRST up-close since the pullback low.
+    low_idx = impulse + 1 + int(np.argmin(gap.to_numpy()))
+    for j in range(low_idx + 1, n - 1):
+        if close.iloc[j] > close.iloc[j - 1]:
+            return None
     corr_vol = float(volume.iloc[seg].mean())
     impulse_vol = float(volume.iloc[impulse])
     if corr_vol >= impulse_vol:

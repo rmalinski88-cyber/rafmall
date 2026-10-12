@@ -15,6 +15,7 @@ from screener.providers import ProviderError, available_providers, get_provider
 
 from . import report
 from screener.report import format as fmt
+from .env import load_dotenv
 from .funds import load_funds
 from .instruments import CRYPTO, CRYPTO_ALIASES, describe, normalise_symbol
 from .lists import load_symbols, tickers
@@ -88,6 +89,11 @@ def build_parser() -> argparse.ArgumentParser:
     market.add_argument("--discord", action="store_true", help="wyślij na Discord")
     market.add_argument("--out-dir", default="out")
 
+    replay = sub.add_parser("replay", help="odtwórz regułę skanu na historii jednego symbolu: w które dni by odpaliła")
+    replay.add_argument("symbol", help="np. ARB-USD, NVDA")
+    replay.add_argument("--rule", default="pullback", help="pullback | ema30")
+    replay.add_argument("--days", type=int, default=120, help="ile ostatnich sesji przejrzeć")
+
     sub.add_parser("check", help="sprawdź konfigurację i dostęp do źródeł danych")
     return parser
 
@@ -134,6 +140,7 @@ class Context:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    load_dotenv()
     try:
         config = load_config(args.config)
     except (FileNotFoundError, ValueError) as exc:
@@ -148,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
 
     handlers = {"find": _cmd_find, "quote": _cmd_quote, "congress": _cmd_congress,
                 "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check,
-                "alerts": _cmd_alerts, "market": _cmd_market}
+                "alerts": _cmd_alerts, "market": _cmd_market, "replay": _cmd_replay}
     try:
         code = handlers[args.command](ctx)
     except (FeedError, ProviderError, FileNotFoundError, ValueError) as exc:
@@ -421,19 +428,12 @@ def _cmd_alerts(ctx: Context) -> int:
 
 
 def _market_symbols(ctx: Context) -> list[tuple[str, str]]:
-    """(ticker, name) for the whole scan: a CSV if given, else SEC's registrant list."""
+    """(ticker, name) for the whole scan: a CSV if given, else the feed's full list (SEC)."""
     if ctx.args.symbols:
         return [(r["ticker"], r.get("name") or r["ticker"]) for r in load_symbols(ctx.args.symbols)]
-    hits = ctx.feed.search_names("", limit=0)
-    if hits:
-        return hits
-    try:
-        table = ctx.feed.sec.tickers()  # live feed only
-    except AttributeError:
-        return []
     # SEC's list includes warrants, units, preferreds ("-WT", "-U", "-P") — skip them.
     out = []
-    for ticker, (_, title) in table.items():
+    for ticker, title in ctx.feed.all_names():
         if any(x in ticker for x in ("-WT", "-U", "-P", "-R", "-UN", "^")) or len(ticker) > 5:
             continue
         out.append((ticker, title))
@@ -454,6 +454,7 @@ def _cmd_market(ctx: Context) -> int:
 
         tv_market = a.tv_market or cfg.get("market_tv_market", "america")
         markets = [tv_market] + (["crypto"] if cfg.get("market_crypto") and tv_market != "crypto" else [])
+        tv_failed = False
         for m in markets:
             try:
                 got = fetch_candidates(m, rules["volume_multiple"], rules["ema_len"],
@@ -461,11 +462,19 @@ def _cmd_market(ctx: Context) -> int:
                 print(f"TradingView screener ({m}): {len(got)} kandydatów do potwierdzenia", file=sys.stderr)
                 symbols.extend(got)
             except Exception as exc:
-                print(f"TradingView screener ({m}) niedostępny ({exc})"
-                      + (" — wracam do spisu SEC." if m != "crypto" else " — krypto z data/crypto.csv."), file=sys.stderr)
+                # A transport/format failure means "use the fallback"; an empty
+                # answer means "nothing matches today" and must NOT trigger the
+                # hour-long SEC download.
                 if m == "crypto":
-                    symbols.extend((r["ticker"], r.get("name") or r["ticker"]) for r in load_symbols("data/crypto.csv"))
-    if not symbols:
+                    print(f"TradingView screener (crypto) niedostępny ({exc}) — krypto z listy zapasowej.", file=sys.stderr)
+                    symbols.extend((r["ticker"], r.get("name") or r["ticker"])
+                                   for r in load_symbols(cfg.get("crypto_list", "data/crypto.csv")))
+                else:
+                    tv_failed = True
+                    print(f"TradingView screener ({m}) niedostępny ({exc}) — wracam do spisu SEC.", file=sys.stderr)
+        if tv_failed:
+            symbols.extend(_market_symbols(ctx))
+    elif source != "tradingview" or a.symbols:
         symbols = _market_symbols(ctx)
     if a.limit:
         symbols = symbols[: a.limit]
@@ -536,6 +545,43 @@ def _cmd_market(ctx: Context) -> int:
     return 0
 
 
+def _cmd_replay(ctx: Context) -> int:
+    """Walk forward through history and show every day the rule would have fired.
+
+    This is the acceptance test for a rule: run it on the symbol and date you
+    found by hand and see whether the scanner would have found it too."""
+    from .market import DEFAULTS, RULES
+
+    a, cfg = ctx.args, ctx.config
+    rules = {**DEFAULTS, **(cfg.get("market_rules") or {})}
+    fn = RULES.get(a.rule)
+    if fn is None:
+        print(f"Nieznana reguła {a.rule!r}; dostępne: {', '.join(RULES)}", file=sys.stderr)
+        return 1
+    symbol = normalise_symbol(a.symbol)
+    prices = ctx.provider.get_prices(symbol, max(int(cfg.get("lookback_days", 420)), a.days + 250))
+    if prices is None or prices.empty:
+        print(f"Brak notowań dla {symbol}.", file=sys.stderr)
+        return 1
+
+    n = len(prices)
+    start = max(60, n - a.days)
+    hits = []
+    for k in range(start, n + 1):
+        hit = fn(symbol, symbol, prices.iloc[:k], rules)
+        if hit is not None:
+            hits.append(hit)
+    first, last = prices.index[start - 1].date(), prices.index[-1].date()
+    print(f"{symbol} · reguła {a.rule} · {first} → {last} ({n - start + 1} sesji)")
+    if not hits:
+        print("  Reguła nie odpaliła ani razu w tym oknie.")
+        return 0
+    for h in hits:
+        print(f"  {h.day}  kurs {h.last_close:.4g}  {h.headline}")
+        print(f"             {h.detail}")
+    return 0
+
+
 def _signals_json(result: report.ScanResult, new_trades) -> dict:
     """Machine-readable output, e.g. for a Claude routine to summarise."""
     return {
@@ -560,6 +606,8 @@ def _cmd_check(ctx: Context) -> int:
     ua = os.environ.get("SEC_USER_AGENT") or ctx.config.get("sec_user_agent")
     print(f"  SEC_USER_AGENT     {'ustawiony' if ua else 'BRAK — wymagany dla feed: live'}")
     print(f"  QUIVER_API_KEY     {'ustawiony' if os.environ.get('QUIVER_API_KEY') else 'brak — Kongres wyłączony'}")
+    print(f"  DISCORD_WEBHOOK    {'ustawiony' if os.environ.get('DISCORD_WEBHOOK_URL') else 'brak — alerty tylko w konsoli'}")
+    print(f"  FTP (publish.py)   {'ustawiony' if os.environ.get('FTP_HOST') else 'brak — stronę wgrywasz ręcznie'}")
     print(f"  źródło transakcji  {ctx.feed.name}")
     print(f"  portfel            {len(ctx.portfolio())} pozycji")
     print(f"  obserwowane        {len(ctx.watchlist())} symboli")
