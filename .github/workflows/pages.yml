@@ -12,10 +12,10 @@ on:
     branches: [main]
     paths: ["data/**", "tracker/**", "screener/**", "config/**", ".github/workflows/pages.yml"]
 
+# Publikacja: push do gałęzi gh-pages (GitHub włącza Pages dla takiej gałęzi; gdyby nie,
+# jedno kliknięcie: Settings → Pages → Source: Deploy from a branch → gh-pages / root).
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -60,19 +60,14 @@ jobs:
             --extra "Surowce=data/universe_surowce.csv" --extra "Energia=data/universe_infrastruktura.csv" \
             --extra "Inne tematy=data/universe_inne.csv" ${sig:+--signals "$sig"}
       - name: Hub (szukaj, okazje, inwestorzy, api)
-        run: python -m tracker hub --site out/site
-      - uses: actions/configure-pages@v5
+        run: |
+          python -m tracker hub --site out/site
+          touch out/site/.nojekyll
+      - name: Publikuj (gałąź gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: out/site
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out/site
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "Narzędzie: dane z ${{ github.run_id }}"
