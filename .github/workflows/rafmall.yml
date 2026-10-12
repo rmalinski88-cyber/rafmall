@@ -10,11 +10,15 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, site, peek]
+        options: [check, first_run, alerts, market, scan, screener, site, peek, dump]
       url:
-        description: "Adres strony dla zadania peek"
+        description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
         default: "https://rafmall.ch"
+      symbole:
+        description: "Symbole dla zadania dump (po spacji)"
+        type: string
+        default: "ARB-USD NVDA"
   schedule:
     # czas UTC; sesja USA to ok. 13:30-21:00 UTC
     - cron: "0 14-21 * * 1-5"   # alerts
@@ -39,6 +43,7 @@ jobs:
       SCHEDULE: ${{ github.event.schedule }}
       INPUT: ${{ inputs.zadanie }}
       PEEK_URL: ${{ inputs.url }}
+      DUMP_SYMBOLS: ${{ inputs.symbole }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -74,6 +79,8 @@ jobs:
             # alerty, scan, skan rynku (150 symboli), strona. Log w out/first_run_*.log (artifact).
             first_run) pip install -q pytest && python scripts/first_run.py ;;
             # Podgląd strony (rafmall.ch): tekst, nawigacja, kolory i zrzut ekranu do logu.
+            # Notowania wybranych symboli do logu (CSV) - sesja bez sieci zapisuje je w data/samples/.
+            dump) python -m tracker dump ${DUMP_SYMBOLS:-ARB-USD NVDA} --days 400 ;;
             peek) pip install -q playwright pillow && playwright install --with-deps chromium >/dev/null && python scripts/peek_site.py "${PEEK_URL:-https://rafmall.ch}" ;;
             alerts)   python -m tracker alerts --discord ;;
             market)   python -m tracker market --discord ;;

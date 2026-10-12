@@ -40,10 +40,11 @@ class Setup:
     day: date | None = None
     last_close: float | None = None
     avg_dollar_volume: float | None = None
+    impulse_day: date | None = None  # the break/impulse bar: one signal per setup, not per up-close
 
     @property
     def key(self) -> str:
-        return f"{self.rule}|{self.ticker}|{self.day}"
+        return f"{self.rule}|{self.ticker}|{self.impulse_day or self.day}"
 
 
 def liquid_enough(prices: pd.DataFrame, cfg: dict) -> bool:
@@ -107,6 +108,7 @@ def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         day=pd.Timestamp(close.index[-1]).date(),
         last_close=last,
         avg_dollar_volume=float((close * volume).tail(20).mean()),
+        impulse_day=break_day,
     )
 
 
@@ -187,6 +189,7 @@ def ema_pullback_entry(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         day=pd.Timestamp(close.index[-1]).date(),
         last_close=last,
         avg_dollar_volume=float((close * volume).tail(20).mean()),
+        impulse_day=impulse_day,
     )
 
 

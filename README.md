@@ -364,7 +364,7 @@ portfel, obserwowane i `data/okazje.csv`. Sześć reguł:
 | wolumen | wolumen dnia ≥ 3× średnia 20 sesji |
 | ruch | zmiana dnia ≥ 2,5× ATR(14) — próg skaluje się ze zmiennością spółki |
 | wybicie | nowy szczyt lub dołek 52 tygodni |
-| trend | kurs przebija SMA50 lub SMA200 |
+| trend | kurs przebija SMA200 (SMA50 okazało się szumem na prawdziwych danych) |
 | smart money | nowe zgłoszenia insiderów / Kongresu dla portfela i okazji |
 | poziom | kurs przebija lokalny szczyt (opór) lub dołek (wsparcie) z ostatnich 90 sesji; poziom gaśnie po przebiciu |
 | **konfluencja** | ≥ 2 różne alerty na jednej spółce tego samego dnia — najmocniejszy sygnał, idzie na górę |

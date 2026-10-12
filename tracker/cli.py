@@ -94,6 +94,10 @@ def build_parser() -> argparse.ArgumentParser:
     replay.add_argument("--rule", default="pullback", help="pullback | ema30")
     replay.add_argument("--days", type=int, default=120, help="ile ostatnich sesji przejrzeć")
 
+    dump = sub.add_parser("dump", help="wypisz notowania (CSV) wybranych symboli — do zapisania jako data/samples/*.csv")
+    dump.add_argument("symbols", nargs="+", help="np. ARB-USD NVDA BTC")
+    dump.add_argument("--days", type=int, default=400)
+
     sub.add_parser("check", help="sprawdź konfigurację i dostęp do źródeł danych")
     return parser
 
@@ -155,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
 
     handlers = {"find": _cmd_find, "quote": _cmd_quote, "congress": _cmd_congress,
                 "insiders": _cmd_insiders, "funds": _cmd_funds, "scan": _cmd_scan, "check": _cmd_check,
-                "alerts": _cmd_alerts, "market": _cmd_market, "replay": _cmd_replay}
+                "alerts": _cmd_alerts, "market": _cmd_market, "replay": _cmd_replay, "dump": _cmd_dump}
     try:
         code = handlers[args.command](ctx)
     except (FeedError, ProviderError, FileNotFoundError, ValueError) as exc:
@@ -461,6 +465,10 @@ def _cmd_market(ctx: Context) -> int:
                                        rules["min_price"], rules["min_avg_dollar_volume"])
                 print(f"TradingView screener ({m}): {len(got)} kandydatów do potwierdzenia", file=sys.stderr)
                 symbols.extend(got)
+                if m == "crypto" and not got:
+                    # An empty crypto answer is more likely our query than a quiet market.
+                    symbols.extend((r["ticker"], r.get("name") or r["ticker"])
+                                   for r in load_symbols(cfg.get("crypto_list", "data/crypto.csv")))
             except Exception as exc:
                 # A transport/format failure means "use the fallback"; an empty
                 # answer means "nothing matches today" and must NOT trigger the
@@ -542,6 +550,21 @@ def _cmd_market(ctx: Context) -> int:
     store.save()
     if scan.warnings:
         print(f"\n{len(scan.warnings)} symboli z błędami (pierwsze 5): " + "; ".join(scan.warnings[:5]), file=sys.stderr)
+    return 0
+
+
+def _cmd_dump(ctx: Context) -> int:
+    """Print real price history as CSV so a session without network can keep it
+    under data/samples/ and replay rules on it (provider 'samples')."""
+    for raw in ctx.args.symbols:
+        symbol = normalise_symbol(raw)
+        prices = ctx.provider.get_prices(symbol, ctx.args.days)
+        if prices is None or prices.empty:
+            print(f"=== DUMP {symbol} EMPTY")
+            continue
+        print(f"=== DUMP {symbol} BEGIN {len(prices)}")
+        print(prices.to_csv(float_format="%.6g", index_label="date").rstrip())
+        print(f"=== DUMP {symbol} END")
     return 0
 
 

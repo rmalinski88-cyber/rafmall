@@ -523,3 +523,27 @@ def test_live_feed_without_sec_user_agent_degrades_gracefully(monkeypatch):
     assert feed.insider_trades("NVDA", date(2026, 1, 1)) == []
     assert feed.all_names() == [] and feed.search_names("nvda") == []
     assert len(feed.warnings) == 1 and "SEC" in feed.warnings[0]
+
+
+def test_pullback_key_is_per_impulse():
+    from tracker.market import DEFAULTS, ema_pullback_entry
+
+    hit = ema_pullback_entry("A", "A", _arb_like_frame(), DEFAULTS)
+    assert hit is not None and hit.impulse_day is not None
+    assert hit.key.endswith(str(hit.impulse_day))
+
+
+def test_samples_provider_reads_csv_and_falls_back(tmp_path):
+    from screener.providers.samples import SamplesProvider
+
+    frame = _frame([10.0] * 50)
+    (tmp_path / "ARB-USD.csv").write_text(frame.to_csv(index_label="date"), encoding="utf-8")
+    provider = SamplesProvider(root=tmp_path)
+    got = provider.get_prices("ARB-USD", 400)
+    assert len(got) == 50 and list(got.columns) == ["open", "high", "low", "close", "volume"]
+    assert not provider.get_prices("NVDA", 400).empty  # fixture fallback
+
+
+def test_crypto_symbols_with_yahoo_ids():
+    assert normalise_symbol("sui") == "SUI20947-USD" and normalise_symbol("MATIC") == "POL28321-USD"
+    assert normalise_symbol("btc") == "BTC-USD"

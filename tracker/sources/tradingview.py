@@ -96,8 +96,11 @@ def fetch_candidates(market: str, volume_multiple: float, ema_len: int, min_pric
                         min_dollar_volume, limit, exchanges)
     if market == "crypto":
         query.pop("markets", None)
-        # Only USD-quoted spot pairs; one row per coin across exchanges comes later via to_yahoo dedupe.
-        query["filter"].append({"left": "currency", "operation": "in_range", "right": ["USD", "USDT", "USDC"]})
+        # The first live run returned 0 rows with a `currency` filter; narrow by exchange and
+        # pair name instead. One row per coin across exchanges comes later via to_yahoo dedupe.
+        query["filter"].append({"left": "exchange", "operation": "in_range",
+                                "right": ["BINANCE", "COINBASE", "BYBIT", "OKX", "KRAKEN"]})
+        query["filter"].append({"left": "name", "operation": "match", "right": "(USDT|USD)$"})
     response = requests.post(SCANNER_URL.format(market=market), json=query, timeout=timeout,
                              headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
     response.raise_for_status()

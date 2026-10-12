@@ -19,12 +19,18 @@ CRYPTO_ALIASES = {
     "ARB", "OP", "APT", "INJ", "TIA", "SEI", "RENDER", "FET", "TAO", "HBAR", "XLM", "PEPE",
 }
 
+# Coins whose ticker collides with another asset carry a numeric id in Yahoo's symbol.
+CRYPTO_YAHOO = {"SUI": "SUI20947-USD", "UNI": "UNI7083-USD", "APT": "APT21794-USD",
+                "TAO": "TAO22974-USD", "POL": "POL28321-USD", "MATIC": "POL28321-USD"}
+
 _QUOTE_TYPES = {"EQUITY": STOCK, "ETF": ETF, "MUTUALFUND": ETF, "CRYPTOCURRENCY": CRYPTO}
 
 
 def normalise_symbol(text: str) -> str:
     """``btc`` -> ``BTC-USD``; ``brk.b`` -> ``BRK-B``; anything else upper-cased."""
     symbol = text.strip().upper()
+    if symbol in CRYPTO_YAHOO:
+        return CRYPTO_YAHOO[symbol]
     if symbol in CRYPTO_ALIASES:
         return f"{symbol}-USD"
     if "." in symbol and not symbol.endswith((".T", ".HK", ".KS", ".KQ", ".TW", ".SS", ".SZ", ".L", ".DE", ".WA")):

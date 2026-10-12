@@ -20,14 +20,20 @@ from pathlib import Path
 
 
 def main() -> int:
-    url = sys.argv[1] if len(sys.argv) > 1 else "https://rafmall.ch"
-    out = Path("out/peek")
-    out.mkdir(parents=True, exist_ok=True)
-
+    urls = [u.strip() for u in (sys.argv[1] if len(sys.argv) > 1 else "https://rafmall.ch").split(",") if u.strip()]
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
         browser = p.chromium.launch()
+        for i, url in enumerate(urls):
+            peek_one(browser, url, Path("out/peek") / (str(i) if i else ""))
+        browser.close()
+    return 0
+
+
+def peek_one(browser, url: str, out: Path) -> None:
+    out.mkdir(parents=True, exist_ok=True)
+    if True:
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.goto(url, wait_until="networkidle", timeout=60_000)
         page.wait_for_timeout(2_000)
@@ -53,7 +59,7 @@ def main() -> int:
         }""")
         text = page.inner_text("body")
         png = page.screenshot(full_page=True)
-        browser.close()
+        page.close()
 
     (out / "page.txt").write_text(text, encoding="utf-8")
     (out / "info.json").write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -66,10 +72,10 @@ def main() -> int:
         im = Image.open(io.BytesIO(png)).convert("RGB")
         w = 900
         im = im.resize((w, int(im.height * w / im.width)))
-        if im.height > 3200:
-            im = im.crop((0, 0, w, 3200))
+        if im.height > 2600:
+            im = im.crop((0, 0, w, 2600))
         buf = io.BytesIO()
-        im.save(buf, "JPEG", quality=55, optimize=True)
+        im.save(buf, "JPEG", quality=50, optimize=True)
         small = buf.getvalue()
         (out / "screenshot_small.jpg").write_bytes(small)
     except Exception as exc:  # Pillow missing: ship the PNG instead
@@ -86,7 +92,6 @@ def main() -> int:
     for i in range(0, len(b64), 76):
         print(b64[i:i + 76])
     print("=== IMG END")
-    return 0
 
 
 if __name__ == "__main__":

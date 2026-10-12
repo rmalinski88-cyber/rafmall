@@ -92,7 +92,8 @@ def detect(ticker: str, name: str, prices: pd.DataFrame, cfg: dict,
                              detail=f"{last:.2f} < {prior_low:.2f}", score=2.0, **common))
 
     # -- moving-average crosses
-    for span in (50, 200):
+    # SMA50 crosses were half of all real alerts and rarely meant anything; SMA200 stays.
+    for span in (200,):
         line = sma(close, span)
         if len(line.dropna()) >= 2:
             a, b = float(line.iloc[-2]), float(line.iloc[-1])

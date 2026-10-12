@@ -11,6 +11,7 @@ from .base import DataProvider, ProviderError
 _REGISTRY = {
     "yahoo": "screener.providers.yahoo:YahooProvider",
     "fixture": "screener.providers.fixture:FixtureProvider",
+    "samples": "screener.providers.samples:SamplesProvider",
 }
 
 
