@@ -18,6 +18,12 @@ nadpisywały sobie pracy. Każda sesja stosuje je bez pytania.
 4. **Nigdy:** `push --force`, rebase cudzej gałęzi, usuwanie gałęzi, pomijanie testów,
    żeby „było zielone".
 
+## Przekazywanie pracy między sesjami
+
+Sesje nie widzą siebie nawzajem — łączy je tylko to repo. Na początku sesji
+przeczytaj notatki w `.claude/sesje/`, a przed każdym pushem zaktualizuj notatkę
+swojej gałęzi. Zasady i szablon: `.claude/sesje/README.md`.
+
 ## Pliki wspólne — źródło konfliktów
 
 `README.md`, `START.md`, `CLAUDE.md`, `config/default.yml`, `requirements.txt`,
