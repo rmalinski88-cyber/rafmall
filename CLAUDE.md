@@ -18,6 +18,12 @@ nadpisywały sobie pracy. Każda sesja stosuje je bez pytania.
 4. **Nigdy:** `push --force`, rebase cudzej gałęzi, usuwanie gałęzi, pomijanie testów,
    żeby „było zielone".
 
+## Przekazywanie pracy między sesjami
+
+Sesje nie widzą siebie nawzajem — łączy je tylko to repo. Na początku sesji
+przeczytaj notatki w `.claude/sesje/`, a przed każdym pushem zaktualizuj notatkę
+swojej gałęzi. Zasady i szablon: `.claude/sesje/README.md`.
+
 ## Pliki wspólne — źródło konfliktów
 
 `README.md`, `START.md`, `CLAUDE.md`, `config/default.yml`, `requirements.txt`,
@@ -51,6 +57,8 @@ Wszystkie testy muszą przechodzić. Commit opisuje **dlaczego**, nie tylko co.
 - Prawdziwe dane (Yahoo, SEC, TradingView) są dostępne **tylko lokalnie**.
   Środowisko chmurowe blokuje te hosty — w chmurze używaj `--provider fixture`
   i mów o tym wprost; nie udawaj wyników.
+- Prawdziwe dane bez komputera: workflow `.github/workflows/rafmall.yml` (GitHub Actions).
+  Klucze są w sekretach repo na GitHubie; opis w `README.md` → „Bez komputera: GitHub Actions".
 - Źródła nieoficjalne (np. skaner TradingView) mogą zniknąć bez ostrzeżenia:
   zawsze z zapasowym źródłem i bez logowania.
 

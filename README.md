@@ -443,6 +443,20 @@ przebiegu (stan w `.cache/tracker_seen.json`). Przykład dla `cron`
 50 22    * * 1-5  cd ~/rafmall && .venv/bin/python -m tracker scan --new-only --no-quotes >> out/scan.log 2>&1
 ```
 
+### Bez komputera: GitHub Actions
+
+`.github/workflows/rafmall.yml` uruchamia te same komendy na serwerach GitHuba, na
+prawdziwych danych: `alerts` co godzinę w sesji USA, `market` i `scan` po sesji
+(dni robocze). Ręcznie: GitHub → Actions → rafmall → Run workflow → wybierz zadanie
+(`check`, `alerts`, `market`, `scan`, `screener`, `site`). Raporty z `out/` są do
+pobrania przy każdym przebiegu (Artifacts, 14 dni).
+
+Klucze wpisujesz raz w GitHub → Settings → Secrets and variables → Actions, pod tymi
+samymi nazwami co w `.env`: `SEC_USER_AGENT`, `QUIVER_API_KEY`, `DISCORD_WEBHOOK_URL`,
+`FTP_HOST`, `FTP_USER`, `FTP_PASS`, `FTP_DIR`. Repo jest publiczne, więc logi przebiegów
+też — dlatego Actions nie używa `data/portfolio.csv`; sygnały pod portfel i eksport do
+Obsidiana zostają na komputerze.
+
 Ten sam przebieg może uruchamiać rutyna Claude — wystarczy prompt w stylu:
 *„Uruchom `python -m tracker scan --new-only`, przeczytaj `out/signals_*.json`
 z dzisiaj i streść mi nowe transakcje oraz alerty portfela.”* Środowisko
