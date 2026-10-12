@@ -28,6 +28,21 @@ Waga na stronie maleje od środka piramidy w obie strony:
 | 2 | Symbotic | SYM | integrator | roboty magazynowe; ekspozycja pośrednia; 42,62 USD na 9 wrz | reel „7 ETF-ów”; reel inwestycjezradkiem | w CSV |
 | 3 | Palantir | PLTR | platforma/AI? | oprogramowanie AI; związek z humanoidami słaby — raczej watchlista trackera | portfel finanse_na_sterydach | w `universe_infrastruktura.csv` |
 
+### Łańcuch dostaw humanoida podzespół po podzespole (film YouTube, polski lektor — tytuł do ustalenia)
+
+Film idzie przez robota element po elemencie i przy każdym wymienia dostawców Zachód / Wschód. Większość już była na liście; nowe oznaczone **NOWA**.
+
+| Podzespół | Zachód | Wschód | Status |
+|---|---|---|---|
+| Przekładnie falowe / reduktory | Harmonic Drive (6324.T, w CSV) | Nabtesco (6268.T, w CSV); Leaderdrive 绿的谐波 (688017.SS, w CSV) | — |
+| Prowadnice liniowe, śruby kulowe | — | THK (6481.T) **NOWA**, NSK (6471.T) **NOWA**; Best Drive / Jinxu (Chiny, nie znam tickerów) | THK „najbardziej skoncentrowana i agresywna opcja” wg filmu |
+| Łożyska | Schaeffler (SHA0.DE, w CSV), SKF (SKF-B.ST) **NOWA**, Timken (TKR) **NOWA** | NSK (j.w.) | cały segment łożysk był pominięty — dodany |
+| Silniki, napędy, aktuatory | Regal Rexnord (RRX, w CSV), Moog (MOG-A, w CSV) | Inovance 汇川 (300124.SZ, w CSV, „chiński gigant automatyki i napędów bezszczotkowych”); Leili 雷利 (Chiny, ticker nieznany) | — |
+| Magnesy ziem rzadkich | MP Materials (MP, w CSV, „perełka”) | JL MAG 金力永磁 (300660.SZ) **NOWA** | — |
+| Baterie | — | BYD (1211.HK) **NOWA**; solid state w kontekście | — |
+
+Nieznane tickery do sprawdzenia na komputerze: Best Drive, Jinxu, Leili (chińskie spółki z prowadnic i silników — mogą być notowane w Szanghaju/Shenzhen albo prywatne).
+
 ## Warstwa 3 — półprzewodniki i AI (segment `platforma/AI`, średnia waga)
 
 | # | Spółka | Ticker | Co robi | Źródło | Status |
@@ -161,6 +176,7 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 - [ ] `python -m screener --universe data/universe_humanoid_global.csv validate`
 - [ ] `python -m screener --universe data/universe_surowce.csv validate`
 - [ ] poprawić tickery ze statusem BŁĄD (szczególnie: KGH.WA, BOL.ST, NST.AX, B, COP.UN, U.UN, MOG-A, Korea Zinc)
+- [ ] sprawdzić: tickery Best Drive, Jinxu, Leili (Chiny); tytuł filmu z łańcuchem dostaw (polski lektor, logo firm na ekranie)
 - [ ] sprawdzić: co to SPCX; ticker USA Rare Earth; czy Vulcan Elements jest notowana; pełna nazwa ETF WIRE; URNM vs URNU
 - [ ] pobrać pełny skład KOID (kraneshares.com) i HUMN (roundhillinvestments.com) — spółki obecne w obu ETF-ach, a nieobecne na naszej liście, to kandydaci nr 1
 - [ ] odszukać pozostałe ETF-y z reela „Te 7 ETF-ów prawdopodobnie przebije S&P500” (Bartosz Kucia) — na screenach był tylko KOID (nr 3)
