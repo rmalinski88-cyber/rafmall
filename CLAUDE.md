@@ -68,6 +68,8 @@ Wszystkie testy muszą przechodzić. Commit opisuje **dlaczego**, nie tylko co.
   i mów o tym wprost; nie udawaj wyników.
 - Prawdziwe dane bez komputera: workflow `.github/workflows/rafmall.yml` (GitHub Actions).
   Klucze są w sekretach repo na GitHubie; opis w `README.md` → „Bez komputera: GitHub Actions".
+  Sesja w chmurze uruchamia go sama (narzędzie GitHub `actions_run_trigger`, zadanie np. `first_run`)
+  i czyta wynik z logu zadania (`get_job_logs`, `return_content`) — nie trzeba pobierać artefaktu.
 - Źródła nieoficjalne (np. skaner TradingView) mogą zniknąć bez ostrzeżenia:
   zawsze z zapasowym źródłem i bez logowania.
 

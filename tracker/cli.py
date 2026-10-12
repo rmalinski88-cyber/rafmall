@@ -616,14 +616,19 @@ def _cmd_check(ctx: Context) -> int:
 
     print("\nTest źródeł:")
     ok = True
-    try:
-        hits = ctx.feed.search_names("NVDA", limit=1)
-        print(f"  SEC lista spółek   OK ({hits[0][1] if hits else 'brak NVDA?'})")
-    except Exception as exc:
-        ok = False
-        print(f"  SEC lista spółek   BŁĄD: {exc}")
-    trades = ctx.feed.insider_trades("NVDA", ctx.since("insider_days", 120))
-    print(f"  SEC Form 4 (NVDA)  {len(trades)} transakcji w 120 dni")
+    sec_ready = getattr(ctx.feed, "sec_ready", lambda: True)()
+    if not sec_ready:
+        print("  SEC lista spółek   pominięte (brak SEC_USER_AGENT)")
+        print("  SEC Form 4 (NVDA)  pominięte (brak SEC_USER_AGENT)")
+    else:
+        try:
+            hits = ctx.feed.search_names("NVDA", limit=1)
+            print(f"  SEC lista spółek   OK ({hits[0][1] if hits else 'brak NVDA?'})")
+        except Exception as exc:
+            ok = False
+            print(f"  SEC lista spółek   BŁĄD: {exc}")
+        trades = ctx.feed.insider_trades("NVDA", ctx.since("insider_days", 120))
+        print(f"  SEC Form 4 (NVDA)  {len(trades)} transakcji w 120 dni")
     congress = ctx.feed.congress_trades(ctx.since("congress_days"))
     print(f"  Kongres            {len(congress)} transakcji")
     card = describe("SPY", ctx.provider, ctx.config)
