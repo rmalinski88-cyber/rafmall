@@ -5,15 +5,25 @@
     },
     "headroom-marketplace": {
       "source": { "source": "github", "repo": "headroomlabs-ai/headroom" }
-    },
-    "one-skill-to-rule-them-all": {
-      "source": { "source": "github", "repo": "rebelytics/one-skill-to-rule-them-all" }
     }
   },
   "enabledPlugins": {
     "claude-code-setup@claude-plugins-official": true,
     "claude-mem@thedotmack": true,
-    "headroom@headroom-marketplace": true,
-    "task-observer@one-skill-to-rule-them-all": true
+    "headroom@headroom-marketplace": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/task-observer-session-start.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
