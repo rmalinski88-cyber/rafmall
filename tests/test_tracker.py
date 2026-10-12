@@ -436,6 +436,22 @@ def test_tradingview_query_and_parse():
     assert parse_response({"unexpected": 1}) == []
 
 
+def test_tradingview_candidates_keep_only_listed_exchanges(monkeypatch):
+    from tracker.sources import tradingview
+
+    class Resp:
+        def raise_for_status(self): pass
+        def json(self):
+            return {"data": [{"s": "NASDAQ:NVDA", "d": ["NVDA", "NVIDIA", 190.0, 5e7, 2.4]},
+                             {"s": "OTC:HOLD", "d": ["HOLD", "Thin OTC", 3.0, 1e4, 3.0]},
+                             {"s": "NYSE:MP", "d": ["MP", "MP Materials", 60.0, 4e6, 2.1]}]}
+
+    import requests
+    monkeypatch.setattr(requests, "post", lambda *a, **k: Resp())
+    got = tradingview.fetch_candidates("america", 2.0, 30, 2.0, 2e6)
+    assert got == [("NVDA", "NVIDIA"), ("MP", "MP Materials")]
+
+
 def _arb_like_frame():
     """Impulse through EMA on volume, 3-bar correction to the EMA, then an up-close."""
     import numpy as np

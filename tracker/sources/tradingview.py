@@ -109,6 +109,10 @@ def fetch_candidates(market: str, volume_multiple: float, ema_len: int, min_pric
                              headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
     response.raise_for_status()
     rows = parse_response(response.json())
+    if exchanges and market != "crypto":
+        # `markets` does not restrict the answer (the first live runs returned 44 OTC names
+        # a day, all too thin to trade); keep only the exchanges the market slug stands for.
+        rows = [r for r in rows if r["exchange"] in exchanges]
     seen: dict[str, str] = {}
     for r in rows:
         seen.setdefault(to_yahoo(r["ticker"], r["exchange"]), r["name"])
