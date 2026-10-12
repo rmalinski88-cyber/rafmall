@@ -4,6 +4,14 @@ Nad tym repo pracuje **równolegle kilka sesji Claude** (Claude Code w chmurze,
 Cowork na komputerze). Poniższe zasady istnieją po to, żeby sesje nie
 nadpisywały sobie pracy. Każda sesja stosuje je bez pytania.
 
+## Decyzje
+
+Gdy czegoś nie wiesz, **zdecyduj sam** tak, jak zrobiłby to doświadczony kolega,
+powiedz jedną linią, co założyłeś, i idź dalej. Nie wystawiaj użytkownikowi list
+opcji. Pytaj tylko wtedy, gdy błędna decyzja byłaby nieodwracalna: kasowanie
+danych, wysyłka na zewnątrz, pieniądze. Sekrety i działania nieodwracalne — patrz
+niżej — tej zasadzie nie podlegają.
+
 ## Gałęzie
 
 1. **Na początku każdej sesji** pobierz stan zdalny i nałóż na niego swoją gałąź:
@@ -12,9 +20,10 @@ nadpisywały sobie pracy. Każda sesja stosuje je bez pytania.
 2. **Jedna sesja = jedna gałąź.** Nazwa: `<obszar>/<temat>`, np. `screener/obsidian`,
    `tracker/alerty`, `site/etf`. Nie pchaj na gałąź, na której pracuje inna sesja,
    chyba że użytkownik wyraźnie o to prosi.
-3. **Gałąź integracyjna** to ta, którą GitHub pokazuje jako domyślną
-   (dziś `claude/stock-search-tool-pkr8rw`; docelowo `main`). Trafiają na nią
-   tylko gotowe kawałki z zielonymi testami, przez scalenie własnej gałęzi.
+3. **Gałąź integracyjna: `main`** (domyślna w GitHubie; z niej biegnie harmonogram
+   GitHub Actions). Trafiają na nią tylko gotowe kawałki z zielonymi testami,
+   przez scalenie własnej gałęzi. Sesja chmurowa `claude/stock-search-tool-pkr8rw`
+   to zwykła gałąź robocza (screener, Obsidian), nie integracyjna.
 4. **Nigdy:** `push --force`, rebase cudzej gałęzi, usuwanie gałęzi, pomijanie testów,
    żeby „było zielone".
 

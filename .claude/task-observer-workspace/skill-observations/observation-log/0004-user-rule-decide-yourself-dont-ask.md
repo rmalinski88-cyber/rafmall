@@ -1,7 +1,7 @@
 ---
 id: 4
 title: "Użytkownik chce, żeby sesja decydowała sama, gdy czegoś nie wie — zamiast dopytywać lub wystawiać opcje"
-status: open
+status: actioned
 type: internal
 skill: []
 proposes_skill: []
@@ -11,8 +11,8 @@ area: "CLAUDE.md — zasady pracy, sposób podejmowania decyzji przez sesje"
 date: 2026-10-12
 session_context: "Konfiguracja wtyczek Claude Code (gałąź setup/wtyczki); po serii komunikatów z opcjami i pytaniami użytkownik napisał: zrób to tak, jak ty byś zrobił, i ogólnie tę zasadę zachowaj — jak czegoś nie wiesz, zrób tak, jak ty byś zrobił"
 parked_until:
-resolved:
-resolution:
+resolved: 2026-10-12
+resolution: "Reguła wpisana do CLAUDE.md jako sekcja „Decyzje” (zdecyduj sam, powiedz co założyłeś, pytaj tylko przy nieodwracalnych skutkach). Użytkownik powtórzył tę prośbę wprost w drugiej sesji tego samego dnia, więc wpis nastąpił jako zwykła praca, bez czekania na przegląd."
 reference:
 commands_verified: none
 ---

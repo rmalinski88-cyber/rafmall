@@ -29,7 +29,6 @@ Powiadomienia: Discord (webhook). Rutyna Claude osobno, do streszczeń — póź
 
 ```bash
 git clone https://github.com/rmalinski88-cyber/rafmall.git && cd rafmall
-git checkout claude/stock-search-tool-pkr8rw
 python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt pytest
 cp .env.example .env            # i uzupełnij: SEC_USER_AGENT (imię, nazwisko, e-mail) + DISCORD_WEBHOOK_URL

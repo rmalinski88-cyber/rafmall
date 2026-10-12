@@ -3,3 +3,4 @@
 2026-10-12 19:29 [rafmall] session-start scan: files=0 parsed=0 principles=0
 2026-10-12 18:01 [rafmall] deliverable flush: no new observations; 0002 set to actioned (settings.proposed.json applied)
 2026-10-12 18:10 [rafmall] observation 0004 written (user rule: decide yourself); no other pending observations
+2026-10-12 18:25 [rafmall] session-start scan: files=4 parsed=4 principles=0
