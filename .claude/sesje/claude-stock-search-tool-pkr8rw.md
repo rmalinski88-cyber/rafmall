@@ -14,6 +14,7 @@
 - `CLAUDE.md` (zasady pracy sesji, sekcja „Decyzje”), utworzenie gałęzi `main` jako integracyjnej.
 
 ## Następny krok
+- Chmura (ta sesja): zadanie `peek` (podgląd rafmall.ch przez runner), potem narzędzie online: hub + wyszukiwarka + okazje + inwestorzy na GitHub Pages.
 - Chmura (ta sesja): `first_run` przez GitHub Actions (`rafmall.yml`, zadanie `first_run`), odczyt logu
   przez API, poprawki tickerów i progów reguł, potem scalenie do `main`.
 - Użytkownik: pierwsze uruchomienie na komputerze wg `START.md`, w tym

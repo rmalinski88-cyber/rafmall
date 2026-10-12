@@ -10,7 +10,11 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, site]
+        options: [check, first_run, alerts, market, scan, screener, site, peek]
+      url:
+        description: "Adres strony dla zadania peek"
+        type: string
+        default: "https://rafmall.ch"
   schedule:
     # czas UTC; sesja USA to ok. 13:30-21:00 UTC
     - cron: "0 14-21 * * 1-5"   # alerts
@@ -34,6 +38,7 @@ jobs:
       FTP_DIR: ${{ secrets.FTP_DIR }}
       SCHEDULE: ${{ github.event.schedule }}
       INPUT: ${{ inputs.zadanie }}
+      PEEK_URL: ${{ inputs.url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,6 +73,8 @@ jobs:
             # Pierwsze uruchomienie na prawdziwych danych: testy, validate 7 list, replay ARB,
             # alerty, scan, skan rynku (150 symboli), strona. Log w out/first_run_*.log (artifact).
             first_run) pip install -q pytest && python scripts/first_run.py ;;
+            # Podgląd strony (rafmall.ch): tekst, nawigacja, kolory i zrzut ekranu do logu.
+            peek) pip install -q playwright pillow && playwright install --with-deps chromium >/dev/null && python scripts/peek_site.py "${PEEK_URL:-https://rafmall.ch}" ;;
             alerts)   python -m tracker alerts --discord ;;
             market)   python -m tracker market --discord ;;
             scan)     python -m tracker scan --new-only --no-quotes ;;
