@@ -1,6 +1,6 @@
 # Briefing — uruchomienie na komputerze
 
-Stan: wszystko zbudowane i przetestowane offline (124 testy). Nic nie było
+Stan: wszystko zbudowane i przetestowane offline (143 testy). Nic nie było
 jeszcze uruchomione na prawdziwych danych, bo telefon nie ma dostępu do Yahoo,
 SEC ani TradingView. Pierwsze uruchomienie na komputerze to jedna komenda,
 która robi wszystko po kolei i zapisuje log. Od tego logu zaczynam poprawki.
@@ -18,6 +18,7 @@ która robi wszystko po kolei i zapisuje log. Od tego logu zaczynam poprawki.
 | Replay | `python -m tracker replay ARB-USD` | w które dni historii reguła by odpaliła — test akceptacyjny | Yahoo |
 | TradingView | `tradingview/rafmall_konfluencja.pine` | te same reguły na wykresie + alert webhook → Discord, realtime | TV Premium |
 | Publikacja | `python scripts/publish.py` | wgrywa `roboty.html` na hosting przez FTP | .env |
+| **Obsidian** | `python -m screener run --obsidian-vault ŚCIEŻKA` | notatki w sejfie: hub tematu, przebieg z datą, spółka z właściwościami (baza do Bases/Dataview) | sejf lokalny |
 
 Powiadomienia: Discord (webhook). Rutyna Claude osobno, do streszczeń — później.
 
