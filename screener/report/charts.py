@@ -169,12 +169,20 @@ def quadrant_scatter(
             f'stroke="{SURFACE}" stroke-width="2"><title>{escape(tooltip)}</title></circle>'
         )
 
-    # Labels are drawn after every dot, so no dot can cover a label.
+    # Labels are drawn after every dot, so no dot can cover a label - and
+    # every dot is an obstacle, so no label covers a neighbouring dot either.
+    dots = [
+        (sx(r["fundamental_score"]) - 7, sy(r["technical_score"]) - 7,
+         sx(r["fundamental_score"]) + 7, sy(r["technical_score"]) + 7)
+        for r in ranked.to_dict("records")
+    ]
     placed: list[tuple[float, float, float, float]] = []
     for record in ranked.head(label_top).to_dict("records"):
         x, y = sx(record["fundamental_score"]), sy(record["technical_score"])
         ticker = str(record["ticker"])
-        box = _place_label(x, y, ticker, placed, left, left + plot_w, top, top + plot_h)
+        box = _place_label(
+            x, y, ticker, placed + dots, left, left + plot_w, top, top + plot_h
+        )
         if box is None:
             continue  # nowhere free: better unlabelled than overlapping
         label_x, label_y, anchor, rect = box
@@ -207,6 +215,9 @@ _LABEL_OFFSETS = [
     (9, 15, "start"), (-9, 15, "end"),
     (0, -12, "middle"), (0, 20, "middle"),
     (9, -18, "start"), (-9, -18, "end"),
+    (18, -22, "start"), (-18, -22, "end"),
+    (18, 26, "start"), (-18, 26, "end"),
+    (0, -24, "middle"), (0, 32, "middle"),
 ]
 
 
