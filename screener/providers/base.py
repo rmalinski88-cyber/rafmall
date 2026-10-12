@@ -45,6 +45,9 @@ RAW_FIELDS = [
     "price_to_book",
     "ev_to_ebitda",
     "peg_ratio",
+    "quote_type",  # EQUITY / ETF / CRYPTOCURRENCY / ...
+    "category",  # fund category, ETFs only
+    "total_assets",  # fund AUM, ETFs only
 ]
 
 

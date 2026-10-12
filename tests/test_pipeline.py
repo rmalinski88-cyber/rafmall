@@ -205,3 +205,41 @@ def test_score_bar_clamps_out_of_range_values():
 def test_scatter_reports_emptiness_rather_than_drawing_nothing():
     empty = pd.DataFrame(columns=["ticker", "fundamental_score", "technical_score", "composite_score"])
     assert "Brak spółek" in quadrant_scatter(empty)
+
+
+# -- static site -----------------------------------------------------------
+
+
+def test_site_renders_global_universe_with_segments(tmp_path, config):
+    from screener.report.site import render_site
+
+    universe = load_universe("data/universe_humanoid_global.csv")
+    assert len(universe) > 50 and "TSLA" in set(universe["ticker"])
+    result = run_screen(universe.head(12), FixtureProvider(), config, profile_name="growth")
+    signals = {"signals": [{"ticker": "TSLA", "label": "SILNY POPYT", "score": 4.0}]}
+    path = render_site(result, tmp_path / "roboty.html", signals=signals)
+    html = path.read_text(encoding="utf-8")
+    assert "Humanoidy" in html and "Podzespoły" in html
+    assert "SILNY POPYT (+4.0)" in html
+    assert "do weryfikacji" in html
+
+
+def test_us_and_european_benchmarks(config):
+    assert benchmark_for("TSLA", config) == "^GSPC"
+    assert benchmark_for("ABBN.SW", config) == "^SSMI"
+    assert benchmark_for("SIE.DE", config) == "^GDAXI"
+    assert benchmark_for("6324.T", config) == "^N225"
+
+
+def test_site_extra_universes_and_etfs(tmp_path, config):
+    from screener.report.site import render_site
+
+    main = run_screen(load_universe("data/universe_humanoid_global.csv").head(6), FixtureProvider(), config)
+    commodities = run_screen(load_universe("data/universe_surowce.csv").head(4), FixtureProvider(), config)
+    etfs = [{"symbol": "KOID", "group": "humanoidy", "label": "KraneShares Humanoid", "notes": "",
+             "last_close": 35.0, "ret_1m": 0.05, "trend": "wzrostowy", "closes": None},
+            {"symbol": "XXXX", "group": "makro", "label": "Broken", "error": "brak notowań"}]
+    html = render_site(main, tmp_path / "s.html", extra=[("Surowce", "tło", commodities)], etfs=etfs).read_text(encoding="utf-8")
+    assert "Surowce" in html and "osobny ranking" in html
+    assert "KOID" in html and "brak notowań" in html
+    assert 'data-seg="extra0"' in html

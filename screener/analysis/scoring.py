@@ -35,6 +35,7 @@ GROUPS = ("fundamental", "technical")
 LABELS = {
     # fundamental
     "market_cap": "Kapitalizacja",
+    "market_cap_usd": "Kapitalizacja (USD)",
     "revenue_growth": "Wzrost przychodów",
     "earnings_growth": "Wzrost zysku",
     "gross_margin": "Marża brutto",

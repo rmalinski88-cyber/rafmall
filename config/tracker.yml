@@ -1,0 +1,85 @@
+# Tracker transakcji Wall Street - konfiguracja.
+#
+# Klucze i dane kontaktowe NIE trafiają do tego pliku. Wpisz je do pliku .env
+# (wzór: .env.example) - tracker wczytuje go sam przy każdym uruchomieniu.
+
+feed: live                 # live = SEC EDGAR + Quiver; fixture = dane syntetyczne offline
+price_provider: yahoo      # notowania akcji/ETF/krypto (jak w screenerze)
+
+portfolio: data/portfolio.csv            # Twoje pozycje (plik prywatny, w .gitignore)
+portfolio_example: data/portfolio.example.csv
+watchlist: data/watchlist.csv
+funds: data/funds_13f.csv
+cusip_map: data/cusip_tickers.csv
+
+cache_dir: .cache
+fresh_cache_hours: 0.5     # indeksy zgłoszeń - krótko, żeby skan co godzinę widział nowe
+price_cache_hours: 1       # notowania - godzina, żeby alerts co godzinę widziało świeży wolumen
+state_file: .cache/tracker_seen.json
+
+# Okna czasowe (dni wstecz, liczone od daty zgłoszenia).
+congress_days: 30
+insider_days: 30
+insider_max_filings: 40    # max. formularzy Form 4 na spółkę w jednym przebiegu
+insider_max_tickers: 40    # max. spółek sprawdzanych pod kątem insiderów w skanie
+
+# 13F: zmiana liczby akcji mniejsza niż 5% = "bez zmian".
+fund_min_change: 0.05
+
+# Wyszukiwarka / notowania.
+lookback_days: 420
+benchmark: SPY
+known_etfs: [SPY, QQQ, VOO, VTI, IWM, DIA, ARKK, XLK, XLF, XLE, SMH, SOXX, GLD, TLT, EEM, VEA, SCHD, IBIT]
+
+# Wagi sygnału: każda osoba/fundusz liczy się raz na spółkę i kierunek.
+signal_weights:
+  insider_buy_csuite: 3.0    # zakup na rynku przez CEO/CFO/prezesa - najsilniejszy sygnał
+  insider_buy: 2.0
+  insider_sell: -0.5         # sprzedaże insiderów to często podatki i dywersyfikacja
+  insider_sell_planned: 0.0  # sprzedaż wg z góry ustalonego planu 10b5-1
+  congress_buy: 1.0
+  congress_sell: -1.0
+  fund_new: 2.0
+  fund_add: 1.0
+  fund_trim: -1.0
+  fund_exit: -2.0
+
+# Alerty (python -m tracker alerts). Listy sprawdzane co godzinę + portfel + obserwowane + okazje.
+alerts_universes:
+  - data/universe_humanoid_global.csv
+  - data/universe_surowce.csv
+  - data/universe_infrastruktura.csv
+  - data/universe_inne.csv
+  - data/etf.csv
+dip_list: data/okazje.csv
+alerts_state_file: .cache/tracker_alerts_seen.json
+alert_rules:
+  volume_multiple: 3.0       # wolumen dnia >= 3x średnia 20 sesji
+  move_atr_multiple: 2.5     # |zmiana dnia| >= 2,5x ATR(14)
+  dip_default_pct: 20        # próg okazji, gdy w okazje.csv brak wartości
+  pivot_window: 5            # lokalny szczyt/dołek = najwyższy/najniższy w oknie ±5 sesji
+  pivot_lookback: 90         # poziomy z ostatnich 90 sesji; gasną po przebiciu
+  confluence_min: 2          # >= 2 różne alerty na spółce tego samego dnia = KONFLUENCJA
+# Powiadomienia: export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+
+# Skan całego rynku (python -m tracker market). Lista symboli: pełny spis SEC (feed: live).
+market_lookback_days: 200
+# Skąd brać kandydatów: sec = pełny spis spółek USA (wolno, pewnie);
+# tradingview = nieoficjalny screener TV, jedno zapytanie zamiast tysięcy pobrań,
+# obejmuje też Europę i Azję. Gdy TV zawiedzie, skan sam wraca do SEC.
+market_source: tradingview
+market_tv_market: america     # america | global | germany | japan | poland | crypto
+market_crypto: true           # dołącz krypto (screener TV 'crypto' albo lista zapasowa)
+crypto_list: data/crypto.csv
+market_state_file: .cache/tracker_market_seen.json
+market_rules:
+  ema_len: 30                   # przebicie EMA30 na świecach dziennych
+  hold_days: 3                  # ...i utrzymanie nad nią przez 3 sesje
+  volume_multiple: 2.0          # wolumen >= 2x średnia 20 sesji sprzed przebicia
+  # Reguła "pullback" (przykład ARB 26 sie 2026): impuls z wolumenem przez EMA30,
+  # korekta do rosnącej EMA bez jej przebicia, wejście na pierwszej świecy w górę.
+  pullback_max_age: 15          # impuls nie starszy niż 15 sesji
+  pullback_pct: 0.03            # korekta liczy się, gdy dołek dojdzie do <= 3% nad EMA
+  impulse_atr_multiple: 1.5     # świeca impulsu >= 1,5x średniego zakresu
+  min_avg_dollar_volume: 2000000  # min. 2 mln USD obrotu dziennie
+  min_price: 2.0

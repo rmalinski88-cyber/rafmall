@@ -21,7 +21,7 @@ def load_universe(path: str | Path) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"universe file not found: {path}")
 
-    frame = pd.read_csv(path, dtype=str, keep_default_na=False)
+    frame = pd.read_csv(path, dtype=str, keep_default_na=False, comment="#")
     frame.columns = [c.strip().lower() for c in frame.columns]
 
     missing = [c for c in REQUIRED_COLUMNS if c not in frame.columns]

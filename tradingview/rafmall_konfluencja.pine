@@ -1,0 +1,106 @@
+//@version=6
+// Rafmall — konfluencja: wolumen względny + poziomy ze szczytów/dołków + SMA.
+// Te same reguły, które liczy `python -m tracker alerts`, narysowane na wykresie,
+// z alertami gotowymi pod webhook (Discord).
+//
+// Instalacja: TradingView → Pine Editor → wklej → "Dodaj do wykresu".
+// Alerty: dzwonek → Warunek: ten wskaźnik → "Dowolna funkcja alert()" → Webhook URL.
+indicator("Rafmall konfluencja", shorttitle="RAFMALL", overlay=true, max_lines_count=100, max_labels_count=100)
+
+// ── Ustawienia (te same domyślne co config/tracker.yml) ───────────────────────
+volLen     = input.int(20,   "Średnia wolumenu (sesje)",        minval=5)
+volMult    = input.float(3.0,"Skok wolumenu: × średniej",       minval=1.0, step=0.5)
+atrLen     = input.int(14,   "ATR (sesje)",                     minval=5)
+atrMult    = input.float(2.5,"Duży ruch: × ATR",                minval=1.0, step=0.5)
+pivotWin   = input.int(5,    "Szczyt/dołek: okno ±sesji",       minval=2)
+pivotMax   = input.int(90,   "Poziomy: ile sesji wstecz",       minval=20)
+showSma    = input.bool(true,"Pokaż SMA50 / SMA200")
+confMin    = input.int(2,    "Konfluencja: min. sygnałów",      minval=2, maxval=4)
+
+// ── 1. Wolumen względny ───────────────────────────────────────────────────────
+volAvg   = ta.sma(volume, volLen)[1]           // średnia BEZ bieżącej świecy
+volRatio = volAvg > 0 ? volume / volAvg : 0.0
+volSpike = volRatio >= volMult
+
+// ── 2. Duży ruch względem własnej zmienności ──────────────────────────────────
+atrVal  = ta.atr(atrLen)
+move    = close - close[1]
+bigMove = math.abs(move) >= atrMult * atrVal
+
+// ── 3. SMA ────────────────────────────────────────────────────────────────────
+sma50  = ta.sma(close, 50)
+sma200 = ta.sma(close, 200)
+plot(showSma ? sma50  : na, "SMA50",  color=color.new(color.blue,   40))
+plot(showSma ? sma200 : na, "SMA200", color=color.new(color.orange, 40), linewidth=2)
+cross50  = ta.cross(close, sma50)
+cross200 = ta.cross(close, sma200)
+
+// ── 4. Poziomy ze szczytów i dołków, gasnące po przebiciu ─────────────────────
+// Potwierdzony szczyt/dołek pojawia się pivotWin sesji po fakcie.
+ph = ta.pivothigh(high, pivotWin, pivotWin)
+pl = ta.pivotlow(low,  pivotWin, pivotWin)
+
+var line[]  lvLines = array.new<line>()
+var float[] lvPrice = array.new<float>()
+var int[]   lvSide  = array.new<int>()     // 1 = opór (szczyt), -1 = wsparcie (dołek)
+
+f_add(price, side, barIdx) =>
+    ln = line.new(barIdx, price, bar_index, price, color=side == 1 ? color.new(color.red, 30) : color.new(color.green, 30), style=line.style_dashed)
+    array.push(lvLines, ln)
+    array.push(lvPrice, price)
+    array.push(lvSide, side)
+
+if not na(ph)
+    f_add(ph, 1, bar_index - pivotWin)
+if not na(pl)
+    f_add(pl, -1, bar_index - pivotWin)
+
+// Przedłuż żywe poziomy; zgaś te przebite zamknięciem albo za stare.
+levelBreakUp   = false
+levelBreakDown = false
+if array.size(lvLines) > 0
+    for i = array.size(lvLines) - 1 to 0
+        ln = array.get(lvLines, i)
+        p  = array.get(lvPrice, i)
+        sd = array.get(lvSide, i)
+        tooOld = bar_index - line.get_x1(ln) > pivotMax
+        brokeUp   = sd == 1  and close[1] <= p and close > p
+        brokeDown = sd == -1 and close[1] >= p and close < p
+        if brokeUp
+            levelBreakUp := true
+        if brokeDown
+            levelBreakDown := true
+        if brokeUp or brokeDown or tooOld
+            line.set_x2(ln, bar_index)
+            if brokeUp or brokeDown
+                label.new(bar_index, p, sd == 1 ? "opór ✕" : "wsparcie ✕", style=label.style_label_left, size=size.tiny, color=color.new(color.gray, 60), textcolor=color.white)
+            array.remove(lvLines, i)
+            array.remove(lvPrice, i)
+            array.remove(lvSide, i)
+        else
+            line.set_x2(ln, bar_index)
+
+// ── 5. Konfluencja ────────────────────────────────────────────────────────────
+signals = (volSpike ? 1 : 0) + (bigMove ? 1 : 0) + ((levelBreakUp or levelBreakDown) ? 1 : 0) + ((cross50 or cross200) ? 1 : 0)
+confluence = signals >= confMin
+
+// ── Rysowanie ─────────────────────────────────────────────────────────────────
+barcolor(confluence ? color.fuchsia : volSpike ? color.yellow : na)
+plotshape(confluence,     "Konfluencja",   shape.diamond,   location.abovebar, color.fuchsia, size=size.small)
+plotshape(levelBreakUp,   "Przebicie oporu",   shape.triangleup,   location.belowbar, color.green, size=size.tiny)
+plotshape(levelBreakDown, "Przebicie wsparcia", shape.triangledown, location.abovebar, color.red,   size=size.tiny)
+
+// ── Alerty (jedna wiadomość; webhook → Discord przyjmuje JSON {"content": ...}) ─
+f_msg(kind) =>
+    '{"content": "🔔 ' + kind + ' **' + syminfo.ticker + '** ' + str.tostring(close, format.mintick) + ' | wolumen ' + str.tostring(volRatio, "#.#") + '× | ruch ' + str.tostring(move / close[1] * 100, "#.#") + '% | ' + timeframe.period + '"}'
+
+if confluence
+    alert(f_msg("🔥 KONFLUENCJA (" + str.tostring(signals) + " sygnały)"), alert.freq_once_per_bar_close)
+else if volSpike
+    alert(f_msg("📊 skok wolumenu"), alert.freq_once_per_bar_close)
+else if levelBreakUp
+    alert(f_msg("🔑 przebicie oporu"), alert.freq_once_per_bar_close)
+else if levelBreakDown
+    alert(f_msg("🔑 przebicie wsparcia"), alert.freq_once_per_bar_close)
+else if cross200
+    alert(f_msg("📈 przecięcie SMA200"), alert.freq_once_per_bar_close)

@@ -1,0 +1,12 @@
+ticker,name,market,segment,confidence,notes
+# Warstwa 2: energia i infrastruktura dla AI. Bez prądu nie ma datacenter, bez datacenter nie ma modeli sterujących robotami.
+# Osobny ranking, mniejsza waga.
+VRT,Vertiv,USA,chłodzenie i zasilanie,high,"Chłodzenie i zasilanie centrów danych"
+ETN,Eaton,USA,chłodzenie i zasilanie,high,"Rozdzielnice, zasilanie awaryjne, dystrybucja energii w datacenter"
+GEV,GE Vernova,USA,sieć i wytwarzanie,high,"Turbiny gazowe, transformatory, sprzęt sieciowy"
+PWR,Quanta Services,USA,sieć i wytwarzanie,medium,"Budowa sieci przesyłowych"
+CEG,Constellation Energy,USA,energetyka,high,"Największa flota jądrowa w USA; umowy z hyperscalerami"
+VST,Vistra,USA,energetyka,medium,"Energetyka, w tym jądrowa"
+TLN,Talen Energy,USA,energetyka,medium,"Elektrownia jądrowa Susquehanna obok kampusu datacenter Amazona"
+NRG,NRG Energy,USA,energetyka,medium,"Elektrownie gazowe szczytowe, sprzedaż detaliczna w Teksasie"
+NEE,NextEra Energy,USA,energetyka,medium,"OZE, magazyny energii, regulowana spółka na Florydzie"

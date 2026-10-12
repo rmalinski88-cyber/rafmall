@@ -1,0 +1,29 @@
+ticker,name
+# Krypto do skanu rynku, gdy screener TradingView nie odpowie. Symbole Yahoo: COIN-USD.
+BTC-USD,Bitcoin
+ETH-USD,Ethereum
+SOL-USD,Solana
+XRP-USD,XRP
+BNB-USD,BNB
+ADA-USD,Cardano
+DOGE-USD,Dogecoin
+AVAX-USD,Avalanche
+DOT-USD,Polkadot
+LINK-USD,Chainlink
+ARB-USD,Arbitrum
+OP-USD,Optimism
+MATIC-USD,Polygon
+POL-USD,Polygon (POL)
+SUI-USD,Sui
+NEAR-USD,NEAR
+ATOM-USD,Cosmos
+UNI-USD,Uniswap
+LTC-USD,Litecoin
+TON-USD,Toncoin
+APT-USD,Aptos
+INJ-USD,Injective
+TIA-USD,Celestia
+SEI-USD,Sei
+RENDER-USD,Render
+FET-USD,Fetch.ai
+TAO-USD,Bittensor

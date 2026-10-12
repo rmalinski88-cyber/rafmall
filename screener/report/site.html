@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="Spółki giełdowe z robotyki humanoidalnej i dostawcy podzespołów: przekładnie, aktuatory, serwonapędy, czujniki, układy AI.">
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --gridline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 32px 16px 72px; }
+
+  header h1 { font-size: 1.6rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header .meta { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
+  header .meta b { color: var(--text-primary); font-weight: 600; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 24px;
+  }
+  .card h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .card .note { color: var(--text-secondary); font-size: 0.85rem; margin: 0 0 18px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 24px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .k { font-size: 0.78rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .v { font-size: 1.75rem; font-weight: 650; margin-top: 2px; }
+  .tile .s { font-size: 0.8rem; color: var(--text-muted); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; position: sticky; top: 0; background: var(--surface-1); }
+  th:first-child, td:first-child,
+  th.left, td.left { text-align: left; }
+  td.num { font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: color-mix(in srgb, var(--series-1) 7%, transparent); }
+  .rank { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tick-name { font-weight: 600; }
+  .sub { color: var(--text-muted); font-size: 0.78rem; font-weight: 400; }
+  .scorecell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .scorecell .v { font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; font-weight: 600; }
+  svg.bar, svg.spark { display: block; }
+
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    fill: var(--text-muted);
+  }
+
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; border: 1px solid var(--border); color: var(--text-secondary); }
+  ul.plain { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.85rem; }
+  ul.plain li { margin-bottom: 4px; }
+  .empty { color: var(--text-muted); font-style: italic; }
+
+  .disclaimer { border-left: 3px solid var(--warning); padding-left: 14px; margin-top: 28px; color: var(--text-secondary); font-size: 0.85rem; }
+  .disclaimer b { color: var(--text-primary); }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 20px 16px 48px; }
+    header h1 { font-size: 1.3rem; }
+  }
+</style>
+<style>
+  .hero p.lead { max-width: 760px; color: var(--text-secondary); margin: 8px 0 0; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; align-items: center; }
+  .controls input, .controls select {
+    font: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); min-width: 180px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font: inherit; font-size: 0.82rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-secondary); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+  .seg-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .seg-head .cnt { color: var(--text-muted); font-size: 0.85rem; }
+  .tone-good { color: var(--good); font-weight: 600; }
+  .tone-bad { color: var(--critical); font-weight: 600; }
+  .tone-neutral { color: var(--text-secondary); }
+  td.notes { white-space: normal; min-width: 240px; max-width: 360px; color: var(--text-secondary); font-size: 0.8rem; text-align: left; }
+  .conf-medium { border-color: var(--warning); color: var(--warning); }
+  tr[hidden] { display: none; }
+  .pos { color: var(--good); } .neg { color: var(--critical); }
+  footer { margin-top: 40px; color: var(--text-muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>{{ title }}</h1>
+    <p class="lead">
+      Spółki giełdowe, które budują roboty humanoidalne, oraz te, które dostarczają do nich podzespoły:
+      przekładnie, aktuatory, serwonapędy, czujniki, układy scalone i magnesy.
+      Dane z {{ run_date }}. Wynik to pozycja względem pozostałych spółek z tej listy (profil „{{ profile_name }}”), nie ocena bezwzględna.
+    </p>
+  </header>
+
+  <div class="tiles">
+    {% for tile in tiles %}
+    <div class="tile"><div class="k">{{ tile.label }}</div><div class="v">{{ tile.value }}</div><div class="s">{{ tile.sub }}</div></div>
+    {% endfor %}
+  </div>
+
+  <div class="controls">
+    <input id="q" type="search" placeholder="Szukaj: nazwa, ticker, podzespół…" aria-label="Szukaj">
+    <select id="market" aria-label="Rynek">
+      <option value="">Wszystkie rynki</option>
+      {% for m in markets %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+    </select>
+    <div class="chips" id="chips">
+      <button class="chip" type="button" data-seg="" aria-pressed="true">Wszystko</button>
+      {% for seg in segments %}<button class="chip" type="button" data-seg="{{ seg.key }}" aria-pressed="false">{{ seg.label }}</button>{% endfor %}
+      {% for seg in extra %}<button class="chip" type="button" data-seg="{{ seg.key }}" aria-pressed="false">{{ seg.label }}</button>{% endfor %}
+    </div>
+  </div>
+
+  {% for seg in segments %}
+  <section class="card seg" data-seg="{{ seg.key }}">
+    <div class="seg-head"><h2>{{ seg.label }}</h2><span class="cnt" data-count></span></div>
+    <p class="note">{{ seg.blurb }}</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Spółka</th><th class="left">Rynek</th><th>Wynik</th><th>Kurs</th><th>Kapitalizacja</th>
+            <th>1M</th><th>12M</th><th>vs SMA200</th><th>RSI</th><th>C/Z</th><th>Wzrost przych.</th>
+            <th class="left">Insiderzy</th><th class="left">12M</th><th class="left">Dlaczego na liście</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in seg.rows %}
+          <tr data-ticker="{{ r.ticker }}" data-market="{{ r.market }}" data-text="{{ (r.name ~ ' ' ~ r.ticker ~ ' ' ~ r.notes ~ ' ' ~ r.market)|lower }}">
+            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub">{{ r.ticker }}{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
+            <td class="left">{{ r.market }}</td>
+            <td class="num"><b>{{ r.score }}</b>{% if r.excluded %}<div class="sub">{{ r.excluded }}</div>{% endif %}</td>
+            <td class="num">{{ r.last_close }} <span class="sub">{{ r.currency }}</span></td>
+            <td class="num">{{ r.market_cap }}</td>
+            <td class="num {{ 'pos' if r.ret_1m.startswith('+') else 'neg' if r.ret_1m.startswith('-') else '' }}">{{ r.ret_1m }}</td>
+            <td class="num {{ 'pos' if r.ret_12m.startswith('+') else 'neg' if r.ret_12m.startswith('-') else '' }}">{{ r.ret_12m }}</td>
+            <td class="num">{{ r.px_vs_sma200 }}</td>
+            <td class="num">{{ r.rsi }}</td>
+            <td class="num">{{ r.pe }}</td>
+            <td class="num">{{ r.revenue_growth }}</td>
+            <td class="left {% if r.signal_tone %}tone-{{ r.signal_tone }}{% endif %}">{{ r.signal or dash }}</td>
+            <td class="left">{{ r.spark }}</td>
+            <td class="notes">{{ r.notes }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+
+  {% for seg in extra %}
+  <section class="card seg extra" data-seg="{{ seg.key }}">
+    <div class="seg-head"><h2>{{ seg.label }}</h2><span class="cnt" data-count></span><span class="pill">tło — osobny ranking</span></div>
+    <p class="note">{{ seg.blurb }}</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Spółka</th><th class="left">Rynek</th><th class="left">Segment</th><th>Wynik</th><th>Kurs</th><th>Kapitalizacja</th>
+            <th>1M</th><th>12M</th><th>vs SMA200</th><th>RSI</th><th>C/Z</th><th class="left">12M</th><th class="left">Dlaczego na liście</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in seg.rows %}
+          <tr data-ticker="{{ r.ticker }}" data-market="{{ r.market }}" data-text="{{ (r.name ~ ' ' ~ r.ticker ~ ' ' ~ r.notes ~ ' ' ~ r.market ~ ' ' ~ r.segment)|lower }}">
+            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub">{{ r.ticker }}{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
+            <td class="left">{{ r.market }}</td>
+            <td class="left"><span class="pill">{{ r.segment }}</span></td>
+            <td class="num"><b>{{ r.score }}</b>{% if r.excluded %}<div class="sub">{{ r.excluded }}</div>{% endif %}</td>
+            <td class="num">{{ r.last_close }} <span class="sub">{{ r.currency }}</span></td>
+            <td class="num">{{ r.market_cap }}</td>
+            <td class="num {{ 'pos' if r.ret_1m.startswith('+') else 'neg' if r.ret_1m.startswith('-') else '' }}">{{ r.ret_1m }}</td>
+            <td class="num {{ 'pos' if r.ret_12m.startswith('+') else 'neg' if r.ret_12m.startswith('-') else '' }}">{{ r.ret_12m }}</td>
+            <td class="num">{{ r.px_vs_sma200 }}</td>
+            <td class="num">{{ r.rsi }}</td>
+            <td class="num">{{ r.pe }}</td>
+            <td class="left">{{ r.spark }}</td>
+            <td class="notes">{{ r.notes }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+
+  {% if etfs %}
+  <section class="card" id="etf">
+    <h2>ETF-y</h2>
+    <p class="note">Gotowe koszyki na ten sam temat. Bez wyniku fundamentalnego — fundusz nie ma marży ani C/Z. Linia = ostatnie 12 miesięcy.</p>
+    {% for g in etfs %}
+    <h3 style="margin: 18px 0 6px; font-size: 0.95rem;">{{ g.label }}</h3>
+    <div class="scroll"><table>
+      <thead><tr><th class="left">ETF</th><th>Kurs</th><th class="left">Trend</th><th>1M</th><th>3M</th><th>12M</th><th>RSI</th><th>vs SMA200</th><th class="left">12M</th><th class="left">Uwagi</th></tr></thead>
+      <tbody>
+      {% for e in g.rows %}
+        {% if e.error %}
+        <tr><td class="left"><span class="tick-name">{{ e.ticker }}</span> <span class="sub">{{ e.name }}</span></td><td class="left" colspan="9"><span class="empty">{{ e.error }}</span></td></tr>
+        {% else %}
+        <tr>
+          <td class="left"><div class="tick-name">{{ e.ticker }}</div><div class="sub">{{ e.name }}</div></td>
+          <td class="num">{{ e.last }}</td><td class="left">{{ e.trend }}</td>
+          <td class="num {{ 'pos' if e.ret_1m.startswith('+') else 'neg' if e.ret_1m.startswith('-') else '' }}">{{ e.ret_1m }}</td>
+          <td class="num {{ 'pos' if e.ret_3m.startswith('+') else 'neg' if e.ret_3m.startswith('-') else '' }}">{{ e.ret_3m }}</td>
+          <td class="num {{ 'pos' if e.ret_12m.startswith('+') else 'neg' if e.ret_12m.startswith('-') else '' }}">{{ e.ret_12m }}</td>
+          <td class="num">{{ e.rsi }}</td><td class="num">{{ e.sma200 }}</td>
+          <td class="left">{{ e.spark }}</td>
+          <td class="notes">{{ e.notes }}</td>
+        </tr>
+        {% endif %}
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <p class="disclaimer">
+    <b>To nie jest rekomendacja inwestycyjna.</b> Lista jest kuratorowana ręcznie, a dane pochodzą z darmowych
+    źródeł i mogą być opóźnione lub niepełne. Spółki oznaczone „do weryfikacji” mają związek z humanoidami
+    pośredni albo wymagający sprawdzenia. Każdą spółkę zweryfikuj w jej sprawozdaniach przed decyzją.
+  </p>
+  <footer>Wygenerowano {{ run_date }} · {{ count }} spółek · <span id="shown"></span></footer>
+</div>
+
+<script>
+(function () {
+  var q = document.getElementById('q'), market = document.getElementById('market'), chips = document.getElementById('chips');
+  var seg = '';
+  function apply() {
+    var text = q.value.trim().toLowerCase(), m = market.value, shown = 0;
+    document.querySelectorAll('section.seg').forEach(function (section) {
+      var segShown = 0;
+      var segMatch = !seg || section.dataset.seg === seg;
+      section.querySelectorAll('tbody tr').forEach(function (tr) {
+        var ok = segMatch && (!m || tr.dataset.market === m) && (!text || tr.dataset.text.indexOf(text) !== -1);
+        tr.hidden = !ok; if (ok) segShown++;
+      });
+      section.hidden = segShown === 0;
+      section.querySelector('[data-count]').textContent = segShown + ' spółek';
+      shown += segShown;
+    });
+    document.getElementById('shown').textContent = 'pokazano ' + shown;
+  }
+  q.addEventListener('input', apply); market.addEventListener('change', apply);
+  chips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    seg = b.dataset.seg;
+    chips.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', c === b ? 'true' : 'false'); });
+    apply();
+  });
+  apply();
+})();
+</script>
+<script type="application/json" id="data">{{ data_json }}</script>
+</body>
+</html>

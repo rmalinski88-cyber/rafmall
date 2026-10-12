@@ -7,3 +7,8 @@ out/*.csv
 out/*.html
 .pytest_cache/
 .DS_Store
+data/portfolio.csv
+.env
+out/*.json
+out/*.log
+out/site/

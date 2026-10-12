@@ -10,7 +10,6 @@ from pathlib import Path
 import pandas as pd
 
 from .analysis.fundamental import compute_fundamental_metrics
-from .analysis.scoring import LABELS
 from .analysis.technical import compute_technical_metrics
 from .cache import Cache
 from .config import benchmark_for, load_config
@@ -19,7 +18,10 @@ from .providers import ProviderError, available_providers, get_provider
 from .report import format as fmt
 from .report.console import render_console
 from .report.html import render_html
+from .report.obsidian import ObsidianError, ObsidianSettings, export_obsidian
+from .report.views import FUNDAMENTAL_VIEW, TECHNICAL_VIEW, format_metric, label
 from .universe import load_universe
+from tracker.lists import load_symbols
 
 # Columns written to CSV, in this order. Everything else stays in the frame
 # for the HTML report but would only clutter a spreadsheet.
@@ -59,12 +61,31 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--limit", type=int, help="ogranicz uniwersum do N pierwszych spółek (do testów)")
     run.add_argument("--out-dir", default="out", help="katalog na raporty (domyślnie: out)")
     run.add_argument("--no-html", action="store_true", help="nie generuj raportu HTML")
+    run.add_argument(
+        "--obsidian-vault",
+        help="ścieżka do sejfu Obsidian (nadpisuje obsidian.vault z konfiguracji)",
+    )
+    run.add_argument(
+        "--no-obsidian",
+        action="store_true",
+        help="nie zapisuj notatek do Obsidiana, nawet jeśli sejf jest skonfigurowany",
+    )
 
     validate = sub.add_parser(
         "validate",
         help="sprawdź, czy każdy ticker z uniwersum rozwiązuje się u dostawcy danych",
     )
     validate.add_argument("--limit", type=int, help="sprawdź tylko N pierwszych spółek")
+
+    site = sub.add_parser("site", help="wygeneruj stronę WWW z listą spółek (do wgrania na serwer)")
+    site.add_argument("--profile", help="profil scoringu")
+    site.add_argument("--limit", type=int, help="ogranicz uniwersum do N pierwszych spółek (do testów)")
+    site.add_argument("--out", default="out/site/roboty.html", help="docelowy plik HTML")
+    site.add_argument("--signals", help="plik signals_*.json z trackera - dołoży kolumnę Insiderzy")
+    site.add_argument("--title", default="Robotyka humanoidalna — spółki i dostawcy podzespołów")
+    site.add_argument("--extra", action="append", default=[], metavar="TYTUŁ=PLIK.csv",
+                      help="dodatkowa lista z osobnym rankingiem, np. 'Surowce=data/universe_surowce.csv' (można podać kilka razy)")
+    site.add_argument("--etfs", metavar="PLIK.csv", help="lista ETF-ów (ticker,name,group,notes); domyślnie data/etf.csv jeśli istnieje")
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
@@ -94,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Błąd dostawcy danych: {exc}", file=sys.stderr)
         return 2
 
-    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show}
+    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show, "site": _cmd_site}
     try:
         return handlers[args.command](args, config, provider)
     except (FileNotFoundError, ValueError, KeyError) as exc:
@@ -133,7 +154,83 @@ def _cmd_run(args, config, provider) -> int:
         html_path = render_html(result, out_dir / f"report_{stamp}.html")
         print(f"HTML: {html_path}", file=sys.stderr)
 
+    return _export_to_obsidian(args, config, result)
+
+
+def _export_to_obsidian(args, config, result) -> int:
+    """Write the vault notes when a vault is configured; nothing to do otherwise."""
+    configured = args.obsidian_vault or (config.get("obsidian") or {}).get("vault")
+    if args.no_obsidian or not configured:
+        return 0
+    try:
+        settings = ObsidianSettings.from_config(config, args.obsidian_vault)
+        summary = export_obsidian(result, settings, config)
+    except ObsidianError as exc:
+        print(f"Obsidian: {exc}", file=sys.stderr)
+        return 1
+    print(summary.describe(), file=sys.stderr)
     return 0
+
+
+def _cmd_site(args, config, provider) -> int:
+    import json
+
+    from .report.site import render_site
+
+    universe = _universe_for(args, config)
+    print(f"Strona dla {len(universe)} spółek (źródło: {provider.name})...", file=sys.stderr)
+
+    def progress(position: int, total: int, ticker: str) -> None:
+        print(f"  [{position}/{total}] {ticker}", end="\r", file=sys.stderr, flush=True)
+
+    result = run_screen(universe, provider, config, args.profile, progress=progress)
+    print(" " * 60, end="\r", file=sys.stderr)
+
+    signals = None
+    if args.signals:
+        signals = json.loads(Path(args.signals).read_text(encoding="utf-8"))
+
+    extra = []
+    for spec in args.extra:
+        heading, _, csv_path = spec.partition("=")
+        if not csv_path:
+            raise ValueError(f"--extra oczekuje formatu TYTUŁ=PLIK.csv, dostał: {spec!r}")
+        extra_universe = load_universe(csv_path)
+        print(f"  + {heading}: {len(extra_universe)} spółek", file=sys.stderr)
+        extra_result = run_screen(extra_universe, provider, config, args.profile)
+        result.warnings.extend(extra_result.warnings)
+        extra.append((heading.strip(), _EXTRA_BLURBS.get(heading.strip().lower(), ""), extra_result))
+
+    etf_path = args.etfs or ("data/etf.csv" if Path("data/etf.csv").exists() else None)
+    etfs = _etf_cards(etf_path, provider, config) if etf_path else []
+
+    path = render_site(result, args.out, signals=signals, title=args.title, extra=extra, etfs=etfs)
+    print(f"Strona: {path}", file=sys.stderr)
+    for warning in result.warnings:
+        print(f"  ! {warning}", file=sys.stderr)
+    return 0
+
+
+_EXTRA_BLURBS = {
+    "surowce": "Bez miedzi (silniki, okablowanie) i metali ziem rzadkich (magnesy w aktuatorach) humanoid nie powstanie. "
+               "Złoto, srebro i uran to tło makro, nie łańcuch dostaw robota. Ranking liczony osobno — te spółki nie wpływają na wyniki humanoidów.",
+    "inne tematy": "Spółki spoza robotyki, które wpadły w oko: chmura GPU, cyberbezpieczeństwo, fintech, obronność. "
+                   "Osobny ranking — nie wpływają na wyniki humanoidów.",
+    "energia": "Modele sterujące robotami uczą się w centrach danych, a te potrzebują prądu, chłodzenia i transformatorów. "
+               "Ekspozycja pośrednia; ranking liczony osobno.",
+}
+
+
+def _etf_cards(path: str, provider, config: dict) -> list[dict]:
+    """Quote cards for every ETF in the CSV, in file order."""
+    from tracker.instruments import describe
+
+    cards = []
+    for entry in load_symbols(path):
+        card = describe(entry["ticker"], provider, config)
+        card.update({"group": entry.get("group", ""), "label": entry.get("name", ""), "notes": entry.get("notes", "")})
+        cards.append(card)
+    return cards
 
 
 def _write_csv(ranked: pd.DataFrame, path: Path) -> None:
@@ -196,46 +293,25 @@ def _cmd_show(args, config, provider) -> int:
     technical = compute_technical_metrics(prices, benchmark_close)
     fundamental = compute_fundamental_metrics(provider.get_fundamentals(ticker))
 
+    # The pipeline converts market cap to USD for the whole universe; a single
+    # lookup has to do it itself.
+    fx = provider.get_fx_to_usd(fundamental.get("currency") or "")
+    market_cap = fundamental.get("market_cap")
+    fundamental["market_cap_usd"] = (market_cap * fx) if (fx and market_cap) else None
+
     print(f"\n{fundamental.get('name') or ticker}  ({ticker})")
     print(f"{fundamental.get('sector') or '?'} · {fundamental.get('industry') or '?'} · "
           f"waluta {fundamental.get('currency') or '?'} · benchmark {benchmark_symbol or '—'}")
     print(f"Sesje w oknie: {technical.get('bars', 0)}  |  Ostatni kurs: {fmt.num(technical.get('last_close'), 2)}")
 
-    _print_block("FUNDAMENTY", fundamental, _FUNDAMENTAL_VIEW)
-    _print_block("TECHNIKA", technical, _TECHNICAL_VIEW)
+    _print_block("FUNDAMENTY", fundamental, FUNDAMENTAL_VIEW)
+    _print_block("TECHNIKA", technical, TECHNICAL_VIEW)
     print()
     return 0
-
-
-# (key, formatter) pairs; formatter names map onto screener.report.format.
-_FUNDAMENTAL_VIEW = [
-    ("market_cap", "raw"), ("revenue_growth", "pct"), ("earnings_growth", "pct"),
-    ("gross_margin", "pct"), ("operating_margin", "pct"), ("profit_margin", "pct"),
-    ("return_on_equity", "pct"), ("return_on_assets", "pct"), ("fcf_margin", "pct"),
-    ("debt_to_equity", "num"), ("current_ratio", "num"), ("net_cash_to_mcap", "pct"),
-    ("trailing_pe", "num"), ("forward_pe", "num"), ("price_to_sales", "num"),
-    ("price_to_book", "num"), ("ev_to_ebitda", "num"),
-]
-
-_TECHNICAL_VIEW = [
-    ("px_vs_sma50", "pct"), ("px_vs_sma200", "pct"), ("sma50_vs_sma200", "pct"),
-    ("rsi14", "num"), ("macd_hist_pct", "pct"),
-    ("ret_1m", "pct"), ("ret_3m", "pct"), ("ret_6m", "pct"), ("ret_12m", "pct"),
-    ("rs_3m", "pct"), ("rs_6m", "pct"),
-    ("dist_52w_high", "pct"), ("pos_52w_range", "pct"),
-    ("max_drawdown_12m", "pct"), ("atr_pct", "pct"),
-]
 
 
 def _print_block(title: str, values: dict, view: list[tuple[str, str]]) -> None:
     print(f"\n{title}")
     print("-" * 46)
     for key, kind in view:
-        value = values.get(key)
-        if kind == "pct":
-            text = fmt.pct(value, signed=key.startswith(("ret_", "rs_", "px_vs", "sma50_vs", "macd")))
-        elif kind == "num":
-            text = fmt.num(value, 2)
-        else:
-            text = f"{value:,.0f}".replace(",", " ") if isinstance(value, (int, float)) else fmt.DASH
-        print(f"  {LABELS.get(key, key):<28}{text:>16}")
+        print(f"  {label(key):<28}{format_metric(key, kind, values.get(key)):>16}")

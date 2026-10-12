@@ -1,0 +1,21 @@
+ticker,name,market,segment,confidence,notes
+# Ciekawe spółki spoza robotyki, zebrane ze screenów. Osobny ranking - nie mieszają się z humanoidami.
+# segment = temat; dopisuj swobodnie.
+CRWV,CoreWeave,USA,chmura GPU,medium,"Wynajem mocy obliczeniowej GPU dla AI; IPO 2025 - z reela finanse_na_sterydach"
+NBIS,Nebius Group,USA,chmura GPU,medium,"Chmura GPU, dawniej Yandex - ze story po wynikach NVIDIA"
+SNDK,Sandisk,USA,pamięci,medium,"Pamięci flash; wydzielony z Western Digital - zweryfikuj ticker"
+ZETA,Zeta Global,USA,martech AI,medium,"Marketing oparty na AI - z reela finanse_na_sterydach"
+SOFI,SoFi Technologies,USA,fintech,medium,"Bank cyfrowy - z reela finanse_na_sterydach"
+PLTR,Palantir,USA,oprogramowanie AI,high,"Analityka AI dla rządu i firm - z portfela finanse_na_sterydach"
+GFS,GlobalFoundries,USA,półprzewodniki,medium,"Produkcja chipów w USA; 675 mln USD od rządu USA"
+LHX,L3Harris,USA,obronność,medium,"1 mld USD od rządu USA - slajd CATO"
+IBM,IBM,USA,komputery kwantowe,medium,"1 mld USD od rządu USA na komputery kwantowe - slajd CATO"
+PANW,Palo Alto Networks,USA,cyberbezpieczeństwo,medium,"Warstwa 4 piramidy Portfela Tradera"
+CRWD,CrowdStrike,USA,cyberbezpieczeństwo,medium,"Warstwa 4 piramidy Portfela Tradera"
+FTNT,Fortinet,USA,cyberbezpieczeństwo,medium,"Warstwa 4 piramidy Portfela Tradera"
+NET,Cloudflare,USA,cyberbezpieczeństwo,medium,"Warstwa 4 piramidy Portfela Tradera"
+MSFT,Microsoft,USA,chmura i modele AI,high,"Hyperscaler; capex na AI"
+GOOGL,Alphabet,USA,chmura i modele AI,high,"Hyperscaler; capex na AI"
+AMZN,Amazon,USA,chmura i modele AI,high,"Hyperscaler; capex na AI; umowa z Talen"
+META,Meta Platforms,USA,chmura i modele AI,high,"Hyperscaler; capex na AI"
+ORCL,Oracle,USA,chmura i modele AI,medium,"Hyperscaler; capex na AI"

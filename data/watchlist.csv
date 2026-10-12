@@ -1,0 +1,15 @@
+ticker,note
+# Obserwowane symbole: akcje, ETF i krypto (krypto jako SYMBOL-USD).
+NVDA,AI / półprzewodniki
+MSFT,
+GOOGL,
+META,
+AAPL,
+TSLA,
+AVGO,
+PLTR,
+SPY,ETF S&P 500
+QQQ,ETF Nasdaq 100
+BTC-USD,Bitcoin
+ETH-USD,Ethereum
+SOL-USD,Solana

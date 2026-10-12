@@ -1,0 +1,19 @@
+ticker,name,market,segment,confidence,notes
+# Surowce - tło dla robotyki humanoidalnej. Osobny ranking (nie miesza się z humanoidami).
+# Związek bezpośredni: miedź (silniki, okablowanie), metale ziem rzadkich (magnesy). Reszta: makro.
+FCX,Freeport-McMoRan,USA,miedź,high,"Największy notowany w USA producent miedzi"
+SCCO,Southern Copper,USA,miedź,high,"Miedź - Peru i Meksyk"
+KGH.WA,KGHM Polska Miedź,Polska,miedź,medium,"Miedź i srebro; GPW - zweryfikuj ticker"
+BOL.ST,Boliden,Szwecja,miedź,medium,"Miedź cynk nikiel - zweryfikuj ticker"
+MP,MP Materials,USA,ziemie rzadkie,high,"Magnesy neodymowe do silników robotów - jest też na liście głównej"
+CCJ,Cameco,Kanada/USA,uran,medium,"Paliwo jądrowe - energia dla AI; makro"
+NEM,Newmont,USA,złoto,medium,"Makro/inflacja; 10,9% GDX"
+AEM,Agnico Eagle Mines,Kanada/USA,złoto,medium,"Makro/inflacja; 10,9% GDX"
+B,Barrick Mining,USA,złoto,medium,"Dawniej GOLD - zweryfikuj ticker"
+WPM,Wheaton Precious Metals,Kanada/USA,złoto,medium,"Streaming złota i srebra; makro"
+AU,AngloGold Ashanti,USA,złoto,medium,"Makro"
+FNV,Franco-Nevada,Kanada/USA,złoto,medium,"Royalty; makro"
+KGC,Kinross Gold,USA,złoto,medium,"Makro"
+GFI,Gold Fields,USA,złoto,medium,"ADR; makro"
+PAAS,Pan American Silver,USA,srebro,medium,"Makro"
+NST.AX,Northern Star Resources,Australia,złoto,medium,"Zweryfikuj ticker"

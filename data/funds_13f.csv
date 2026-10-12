@@ -1,0 +1,7 @@
+key,fund,manager,cik
+# Fundusze śledzone przez 13F. CIK sprawdzisz na https://www.sec.gov/cgi-bin/browse-edgar?company=NAZWA
+berkshire,Berkshire Hathaway,Warren Buffett,1067983
+bridgewater,Bridgewater Associates,Ray Dalio,1350694
+pershing,Pershing Square Capital,Bill Ackman,1336528
+ark,ARK Investment Management,Cathie Wood,1697748
+scion,Scion Asset Management,Michael Burry,1649339
