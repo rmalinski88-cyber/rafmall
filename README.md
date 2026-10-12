@@ -351,8 +351,14 @@ starsze niż 6 sesji są pomijane — to już nie początek ruchu. Odfiltrowane 
 spółki poniżej 2 USD i z obrotem poniżej 2 mln USD dziennie. Progi w
 `config/tracker.yml` → `market_rules`.
 
-Pierwszy przebieg pobiera kilka tysięcy symboli z Yahoo (30–60 minut);
-kolejne idą z cache. Uruchamiaj raz dziennie po sesji USA (ok. 23:00 CET).
+**Skąd kandydaci.** Domyślnie z nieoficjalnego screenera TradingView
+(`market_source: tradingview`): jedno zapytanie zwraca spółki z wolumenem
+≥ 2× i kursem nad EMA30, także z Europy i Azji (`--tv-market global`).
+Nasz kod potwierdza na danych Yahoo warunek 3 sesji. Gdy screener nie
+odpowie, skan sam przechodzi na pełny spis SEC (`--source sec`): pewniej,
+ale pierwszy przebieg pobiera kilka tysięcy symboli z Yahoo (30–60 minut).
+TradingView nie ma oficjalnego API; ten endpoint może się zmienić bez
+ostrzeżenia, dlatego SEC zostaje jako zapas. Uruchamiaj raz dziennie po sesji USA (ok. 23:00 CET).
 Kolejne reguły to jedna funkcja w `tracker/market.py` i jeden wpis w `RULES`.
 
 ## TradingView

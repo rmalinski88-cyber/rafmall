@@ -68,7 +68,8 @@ Do crona co godzinę w godzinach sesji USA — przykład w README.
 ## 5a. Skan całego rynku (reguła EMA30 + wolumen)
 
 ```bash
-python -m tracker market --limit 200       # pierwszy test na 200 symbolach (kilka minut)
+python -m tracker market                   # kandydaci ze screenera TradingView (sekundy) + potwierdzenie na Yahoo
+python -m tracker market --source sec --limit 200   # zapas: spis SEC, test na 200 symbolach
 python -m tracker market --discord         # pełny rynek USA, 30–60 min za pierwszym razem
 ```
 

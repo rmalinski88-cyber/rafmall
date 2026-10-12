@@ -414,3 +414,17 @@ def test_market_command_runs_on_symbol_file(offline_config, tmp_path, capsys):
     assert main(args) == 0
     assert "Skan rynku" in capsys.readouterr().out
     assert next(tmp_path.glob("market_*.json")).exists()
+
+
+def test_tradingview_query_and_parse():
+    from tracker.sources.tradingview import build_query, parse_response, to_yahoo
+
+    q = build_query(2.0, 30, 2.0, 2_000_000, exchanges=["NASDAQ"])
+    assert any(f["left"] == "EMA30" for f in q["filter"]) and q["markets"] == ["NASDAQ"]
+    payload = {"data": [{"s": "NASDAQ:NVDA", "d": ["NVDA", "NVIDIA", 190.0, 5e7, 2.4]},
+                        {"s": "XETR:SIE", "d": ["SIE", "Siemens", 180.0, 1e6, 2.1]},
+                        {"s": "garbage", "d": []}]}
+    rows = parse_response(payload)
+    assert [r["ticker"] for r in rows] == ["NVDA", "SIE"]
+    assert to_yahoo("SIE", "XETR") == "SIE.DE" and to_yahoo("BRK.B", "NYSE") == "BRK-B"
+    assert parse_response({"unexpected": 1}) == []

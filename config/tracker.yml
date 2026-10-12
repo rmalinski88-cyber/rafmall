@@ -65,6 +65,11 @@ alert_rules:
 
 # Skan całego rynku (python -m tracker market). Lista symboli: pełny spis SEC (feed: live).
 market_lookback_days: 200
+# Skąd brać kandydatów: sec = pełny spis spółek USA (wolno, pewnie);
+# tradingview = nieoficjalny screener TV, jedno zapytanie zamiast tysięcy pobrań,
+# obejmuje też Europę i Azję. Gdy TV zawiedzie, skan sam wraca do SEC.
+market_source: tradingview
+market_tv_market: america     # america | global | germany | japan | poland
 market_state_file: .cache/tracker_market_seen.json
 market_rules:
   ema_len: 30                   # przebicie EMA30 na świecach dziennych

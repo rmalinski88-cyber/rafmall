@@ -79,6 +79,9 @@ def build_parser() -> argparse.ArgumentParser:
     market = sub.add_parser("market", help="skan całego rynku USA: spółki, które właśnie zaczynają ruch (EMA30 + wolumen)")
     market.add_argument("--rule", action="append", default=[], help="reguła (domyślnie wszystkie): ema30")
     market.add_argument("--symbols", help="własny plik CSV z symbolami zamiast pełnej listy SEC")
+    market.add_argument("--source", choices=["sec", "tradingview"], default=None,
+                        help="skąd brać kandydatów: sec (pełny spis USA) albo tradingview (screener TV, też Europa/Azja); domyślnie z configu")
+    market.add_argument("--tv-market", default=None, help="rynek screenera TV: america, global, germany, japan, poland")
     market.add_argument("--limit", type=int, help="sprawdź tylko N pierwszych symboli (do testów)")
     market.add_argument("--all", action="store_true", help="pokaż wszystkie, nie tylko nowe od ostatniego skanu")
     market.add_argument("--top", type=int, default=30, help="ile najmocniejszych pokazać")
@@ -444,7 +447,21 @@ def _cmd_market(ctx: Context) -> int:
     a, cfg = ctx.args, ctx.config
     rules = {**DEFAULTS, **(cfg.get("market_rules") or {})}
     chosen = {k: RULES[k] for k in (a.rule or RULES) if k in RULES}
-    symbols = _market_symbols(ctx)
+    source = a.source or cfg.get("market_source", "sec")
+    symbols: list[tuple[str, str]] = []
+    if source == "tradingview" and not a.symbols:
+        from .sources.tradingview import fetch_candidates
+
+        tv_market = a.tv_market or cfg.get("market_tv_market", "america")
+        try:
+            symbols = fetch_candidates(tv_market, rules["volume_multiple"], rules["ema_len"],
+                                       rules["min_price"], rules["min_avg_dollar_volume"])
+            print(f"TradingView screener ({tv_market}): {len(symbols)} kandydatów do potwierdzenia", file=sys.stderr)
+        except Exception as exc:
+            print(f"TradingView screener niedostępny ({exc}) — wracam do spisu SEC.", file=sys.stderr)
+            symbols = []
+    if not symbols:
+        symbols = _market_symbols(ctx)
     if a.limit:
         symbols = symbols[: a.limit]
     if not symbols:
