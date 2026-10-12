@@ -1,7 +1,7 @@
 ---
 id: 1
 title: "CLAUDE.md przypina workspace dla chmury literalną ścieżką /home/user/rafmall, a klon sesji chmurowej leży w /home/claude/rafmall"
-status: open
+status: actioned
 type: internal
 skill: []
 proposes_skill: []
@@ -11,8 +11,8 @@ area: "aktywacja Task Observera — przypięcie ścieżki workspace w CLAUDE.md"
 date: 2026-10-12
 session_context: "Podłączenie repo rafmall do działającej sesji chmurowej (repo dołączone w trakcie sesji) i pierwszy Session Start Protocol w tym klonie"
 parked_until:
-resolved:
-resolution:
+resolved: 2026-10-12
+resolution: "Na wyraźną prośbę użytkownika poprawiono CLAUDE.md, sekcja Task Observer — jedna reguła ścieżki dla każdego środowiska (git rev-parse --show-toplevel) i zdanie, że nieistniejąca ścieżka to błąd"
 reference:
 commands_verified: "git rev-parse --show-toplevel — run, zwróciło /home/claude/rafmall; ls -d /home/user/rafmall — run, błąd No such file or directory"
 ---

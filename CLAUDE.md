@@ -84,10 +84,12 @@ Wtyczki Claude Code dla tego repo opisuje `.claude/PLUGINS.md`.
 
 Workspace skilla jest w repo, więc obserwacje wędrują z gitem:
 
-- sesje w chmurze (claude.ai/code): `/home/user/rafmall/.claude/task-observer-workspace`
-- lokalnie: `<katalog repo>/.claude/task-observer-workspace`, gdzie katalog repo to
-  wynik `git rev-parse --show-toplevel`. Ustal go raz na początku sesji i dalej używaj
-  tylko tej ścieżki absolutnej. Hook SessionStart podaje gotową ścieżkę.
+W każdym środowisku (chmura i komputer) workspace to
+`<katalog repo>/.claude/task-observer-workspace`, gdzie katalog repo to wynik
+`git rev-parse --show-toplevel`. Ustal go raz na początku sesji i dalej używaj tylko tej
+ścieżki absolutnej. Jeśli wyliczona ścieżka nie istnieje, to błąd — zgłoś go, nie twórz
+drugiego workspace'u. Gdy repo zostało dołączone w trakcie sesji, protokół startowy
+wykonaj od razu po pojawieniu się tego pliku w kontekście.
 
 Poniższy blok aktywacyjny pochodzi z `references/environments.md` skilla. `[ABSOLUTE PATH]`
 oznacza ścieżkę ustaloną wyżej, `[PROJECTS ROOT]` to katalog nadrzędny repo.
