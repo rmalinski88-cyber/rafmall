@@ -36,7 +36,12 @@ def peek_one(browser, url: str, out: Path) -> None:
     if True:
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.goto(url, wait_until="networkidle", timeout=60_000)
-        page.wait_for_timeout(2_000)
+        # SPAs fetch their data after load: wait, scroll to the bottom (lazy content), wait again.
+        page.wait_for_timeout(4_000)
+        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+        page.wait_for_timeout(3_000)
+        page.evaluate("window.scrollTo(0, 0)")
+        page.wait_for_timeout(500)
 
         info = page.evaluate("""() => {
             const css = getComputedStyle(document.body);
@@ -47,7 +52,7 @@ def peek_one(browser, url: str, out: Path) -> None:
                 const v = root.getPropertyValue(name).trim(); if (v) vars[name] = v;
             }
             const links = [...document.querySelectorAll('a[href]')].map(a => ({text: a.innerText.trim().slice(0,60), href: a.getAttribute('href')}))
-                           .filter(l => l.text || l.href).slice(0, 80);
+                           .filter(l => l.text || l.href).slice(0, 300);
             const heads = [...document.querySelectorAll('h1,h2,h3')].map(h => h.tagName + ': ' + h.innerText.trim().slice(0,120)).slice(0, 60);
             const fonts = new Set(); document.querySelectorAll('body *').forEach(e => { if (fonts.size < 6) fonts.add(getComputedStyle(e).fontFamily); });
             return {title: document.title, lang: document.documentElement.lang,
@@ -85,7 +90,7 @@ def peek_one(browser, url: str, out: Path) -> None:
     print("=== PEEK URL", url)
     print("=== INFO", json.dumps(info, ensure_ascii=False))
     print("=== TEXT BEGIN")
-    print(text[:20_000])
+    print(text[:60_000])
     print("=== TEXT END")
     b64 = base64.b64encode(small).decode()
     print(f"=== IMG BEGIN {len(small)} bytes, {len(b64)} b64 chars")
