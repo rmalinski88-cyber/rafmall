@@ -22,14 +22,18 @@ MARKETS = {
     "germany": ["XETR", "FWB"],
     "japan": ["TSE"],
     "poland": ["GPW"],
+    "crypto": [],  # TradingView's crypto screener slug; pairs like BINANCE:ARBUSDT
 }
 
 
 def build_query(volume_multiple: float, ema_len: int, min_price: float,
                 min_dollar_volume: float, limit: int = 500, exchanges: list[str] | None = None) -> dict:
     """The screener's JSON body for 'volume spike + close above EMA'."""
-    filters = [
+    crypto = exchanges is not None and market_is_crypto(exchanges)
+    filters = [] if crypto else [
         {"left": "type", "operation": "in_range", "right": ["stock", "dr", "fund"]},
+    ]
+    filters += [
         {"left": "close", "operation": "greater", "right": min_price},
         {"left": f"EMA{ema_len}", "operation": "less", "right": "close"},
         {"left": "relative_volume_10d_calc", "operation": "greater", "right": volume_multiple},
@@ -42,9 +46,13 @@ def build_query(volume_multiple: float, ema_len: int, min_price: float,
         "sort": {"sortBy": "relative_volume_10d_calc", "sortOrder": "desc"},
         "range": [0, limit],
     }
-    if exchanges:
+    if exchanges and not crypto:
         query["markets"] = exchanges
     return query
+
+
+def market_is_crypto(exchanges) -> bool:
+    return exchanges == ["__crypto__"]
 
 
 def parse_response(payload: dict) -> list[dict]:
@@ -65,7 +73,14 @@ def parse_response(payload: dict) -> list[dict]:
 
 
 def to_yahoo(ticker: str, exchange: str) -> str:
-    """TradingView 'XETR:SIE' -> Yahoo 'SIE.DE'; US tickers pass through."""
+    """TradingView 'XETR:SIE' -> Yahoo 'SIE.DE'; 'BINANCE:ARBUSDT' -> 'ARB-USD'; US tickers pass through."""
+    if exchange in ("BINANCE", "COINBASE", "BYBIT", "OKX", "KRAKEN", "BITGET", "KUCOIN", "CRYPTO"):
+        base = ticker
+        for quote in ("USDT", "USDC", "USD", "BUSD"):
+            if base.endswith(quote):
+                base = base[: -len(quote)]
+                break
+        return f"{base}-USD"
     suffix = {"XETR": ".DE", "FWB": ".F", "TSE": ".T", "GPW": ".WA", "LSE": ".L", "EURONEXT": ".PA",
               "SIX": ".SW", "HKEX": ".HK", "TWSE": ".TW", "KRX": ".KS", "SSE": ".SS", "SZSE": ".SZ"}.get(exchange, "")
     return ticker.replace(".", "-") + suffix
@@ -76,9 +91,18 @@ def fetch_candidates(market: str, volume_multiple: float, ema_len: int, min_pric
     """``(yahoo_symbol, name)`` for every screener hit; raises on transport error."""
     import requests
 
-    query = build_query(volume_multiple, ema_len, min_price, min_dollar_volume, limit, MARKETS.get(market))
+    exchanges = ["__crypto__"] if market == "crypto" else MARKETS.get(market)
+    query = build_query(volume_multiple, ema_len, min_price if market != "crypto" else 0.0,
+                        min_dollar_volume, limit, exchanges)
+    if market == "crypto":
+        query.pop("markets", None)
+        # Only USD-quoted spot pairs; one row per coin across exchanges comes later via to_yahoo dedupe.
+        query["filter"].append({"left": "currency", "operation": "in_range", "right": ["USD", "USDT", "USDC"]})
     response = requests.post(SCANNER_URL.format(market=market), json=query, timeout=timeout,
                              headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"})
     response.raise_for_status()
     rows = parse_response(response.json())
-    return [(to_yahoo(r["ticker"], r["exchange"]), r["name"]) for r in rows]
+    seen: dict[str, str] = {}
+    for r in rows:
+        seen.setdefault(to_yahoo(r["ticker"], r["exchange"]), r["name"])
+    return list(seen.items())

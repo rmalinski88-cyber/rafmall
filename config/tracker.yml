@@ -69,12 +69,18 @@ market_lookback_days: 200
 # tradingview = nieoficjalny screener TV, jedno zapytanie zamiast tysięcy pobrań,
 # obejmuje też Europę i Azję. Gdy TV zawiedzie, skan sam wraca do SEC.
 market_source: tradingview
-market_tv_market: america     # america | global | germany | japan | poland
+market_tv_market: america     # america | global | germany | japan | poland | crypto
+market_crypto: true           # dołącz krypto (screener TV 'crypto' albo data/crypto.csv)
 market_state_file: .cache/tracker_market_seen.json
 market_rules:
   ema_len: 30                   # przebicie EMA30 na świecach dziennych
   hold_days: 3                  # ...i utrzymanie nad nią przez 3 sesje
   volume_multiple: 2.0          # wolumen >= 2x średnia 20 sesji sprzed przebicia
   max_hold_days: 6              # starsze przebicia to już nie "początek ruchu"
+  # Reguła "pullback" (przykład ARB 26 sie 2026): impuls z wolumenem przez EMA30,
+  # korekta do rosnącej EMA bez jej przebicia, wejście na pierwszej świecy w górę.
+  pullback_max_age: 15          # impuls nie starszy niż 15 sesji
+  pullback_pct: 0.03            # korekta liczy się, gdy dołek dojdzie do <= 3% nad EMA
+  impulse_atr_multiple: 1.5     # świeca impulsu >= 1,5x średniego zakresu
   min_avg_dollar_volume: 2000000  # min. 2 mln USD obrotu dziennie
   min_price: 2.0

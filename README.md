@@ -339,17 +339,27 @@ python -m tracker market --symbols data/universe_inne.csv   # własna lista
 ```
 
 Inaczej niż `alerts`, które pilnują Twoich list, `market` przegląda **wszystkie
-spółki notowane w USA** (spis SEC, za darmo) i pokazuje te, które właśnie
-spełniły regułę. Pierwsza reguła, `ema30`, to reguła Rafała:
+spółki notowane w USA** (spis SEC, za darmo) **i krypto** i pokazuje te,
+które właśnie spełniły regułę. Główna reguła, `pullback`, to setup Rafała
+z przykładu Arbitrum (wejście 26 sierpnia 2026):
+
+1. **impuls**: w ostatnich 15 sesjach kurs przebija EMA30 od dołu na wolumenie
+   ≥ 2× średniej i świecy ≥ 1,5× średniego zakresu,
+2. **korekta**: kurs cofa się do rosnącej EMA30 (dołek ≤ 3% nad nią), zamknięcia
+   zostają nad nią, wolumen korekty niższy niż impulsu,
+3. **wejście**: pierwsza świeca zamykająca wyżej niż poprzednia — tu pada sygnał.
+
+Wejście po korekcie, nie na szczycie impulsu: bliżej średniej, mniejsze ryzyko.
+Druga, prostsza reguła `ema30` (`--rule ema30`):
 
 1. kurs przebija EMA30 od dołu (świece dzienne),
 2. zamyka się nad nią przez **3 kolejne sesje**,
 3. w dniu przebicia lub podczas utrzymania wolumen ≥ **2× średnia** z 20 sesji sprzed przebicia.
 
-Sygnał pojawia się raz, w dniu potwierdzenia (trzecia sesja). Przebicia
-starsze niż 6 sesji są pomijane — to już nie początek ruchu. Odfiltrowane są
-spółki poniżej 2 USD i z obrotem poniżej 2 mln USD dziennie. Progi w
-`config/tracker.yml` → `market_rules`.
+Każdy sygnał pojawia się raz. Odfiltrowane są spółki poniżej 2 USD i z obrotem
+poniżej 2 mln USD dziennie (krypto: tylko obrót). Progi w `config/tracker.yml`
+→ `market_rules`. Krypto: screener TV `crypto` (pary USD/USDT, jedna na monetę),
+zapas `data/crypto.csv`; świece dobowe, 3 sesje = 3 doby.
 
 **Skąd kandydaci.** Domyślnie z nieoficjalnego screenera TradingView
 (`market_source: tradingview`): jedno zapytanie zwraca spółki z wolumenem

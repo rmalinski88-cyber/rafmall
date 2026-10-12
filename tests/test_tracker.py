@@ -428,3 +428,49 @@ def test_tradingview_query_and_parse():
     assert [r["ticker"] for r in rows] == ["NVDA", "SIE"]
     assert to_yahoo("SIE", "XETR") == "SIE.DE" and to_yahoo("BRK.B", "NYSE") == "BRK-B"
     assert parse_response({"unexpected": 1}) == []
+
+
+def _arb_like_frame():
+    """Impulse through EMA on volume, 3-bar correction to the EMA, then an up-close."""
+    import numpy as np
+    base = [0.090 - 0.0002 * i for i in range(80)]                      # slow drift down: below EMA
+    impulse = [0.086, 0.094, 0.100]                                      # three strong up bars
+    correction = [0.094, 0.088, 0.084]                                   # back to the (now rising) EMA
+    entry = [0.088]
+    closes = base + impulse + correction + entry
+    vols = [10e6] * 80 + [35e6, 40e6, 30e6] + [15e6, 12e6, 11e6] + [14e6]
+    frame = _frame(closes, vols)
+    # widen the impulse bars' ranges so they clear the ATR gate
+    for i in range(80, 83):
+        frame.loc[frame.index[i], "high"] = closes[i] * 1.06
+        frame.loc[frame.index[i], "low"] = closes[i] * 0.95
+    return frame
+
+
+def test_pullback_entry_fires_on_arb_like_setup():
+    from tracker.market import DEFAULTS, ema_pullback_entry
+
+    hit = ema_pullback_entry("ARB-USD", "Arbitrum", _arb_like_frame(), DEFAULTS)
+    assert hit is not None and hit.rule == "pullback"
+    assert "korekcie" in hit.headline
+
+
+def test_pullback_needs_a_correction_not_just_a_runup():
+    from tracker.market import DEFAULTS, ema_pullback_entry
+
+    frame = _arb_like_frame()
+    # replace the correction with a continued run-up: no touch of the EMA zone
+    import numpy as np
+    idx = frame.index
+    for i, v in zip(range(83, 87), [0.108, 0.112, 0.115, 0.118]):
+        frame.loc[idx[i], ["open", "close"]] = v
+        frame.loc[idx[i], "high"] = v * 1.01
+        frame.loc[idx[i], "low"] = v * 0.99
+    assert ema_pullback_entry("X", "X", frame, DEFAULTS) is None
+
+
+def test_tradingview_crypto_symbol_mapping():
+    from tracker.sources.tradingview import to_yahoo
+
+    assert to_yahoo("ARBUSDT", "BINANCE") == "ARB-USD"
+    assert to_yahoo("BTCUSD", "COINBASE") == "BTC-USD"

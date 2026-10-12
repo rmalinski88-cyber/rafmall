@@ -193,6 +193,7 @@ Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny
 
 ## Zasady od Rafała
 
+- **Setup wejścia (przykład ARB/USDT, 26 sie 2026)**: impuls z wolumenem przez EMA30 → korekta do rosnącej EMA30 bez jej przebicia → wejście na pierwszej świecy w górę. Potem +100% w miesiąc. To jest to, czego szukamy → reguła `pullback` w `tracker market`. **Krypto też.**
 - **Reguła „zainteresuj się spółką”**: świece dzienne, przebicie EMA30 + utrzymanie ≥ 3 sesje + wolumen ≥ 2× ostatnich świec. Szukać na całym rynku, nie tylko na listach → `tracker market`.
 
 - **Ciekawe spółki z każdego sektora** trafiają na stronę, w osobnej sekcji z własnym rankingiem.

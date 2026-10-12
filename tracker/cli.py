@@ -453,13 +453,18 @@ def _cmd_market(ctx: Context) -> int:
         from .sources.tradingview import fetch_candidates
 
         tv_market = a.tv_market or cfg.get("market_tv_market", "america")
-        try:
-            symbols = fetch_candidates(tv_market, rules["volume_multiple"], rules["ema_len"],
+        markets = [tv_market] + (["crypto"] if cfg.get("market_crypto") and tv_market != "crypto" else [])
+        for m in markets:
+            try:
+                got = fetch_candidates(m, rules["volume_multiple"], rules["ema_len"],
                                        rules["min_price"], rules["min_avg_dollar_volume"])
-            print(f"TradingView screener ({tv_market}): {len(symbols)} kandydatów do potwierdzenia", file=sys.stderr)
-        except Exception as exc:
-            print(f"TradingView screener niedostępny ({exc}) — wracam do spisu SEC.", file=sys.stderr)
-            symbols = []
+                print(f"TradingView screener ({m}): {len(got)} kandydatów do potwierdzenia", file=sys.stderr)
+                symbols.extend(got)
+            except Exception as exc:
+                print(f"TradingView screener ({m}) niedostępny ({exc})"
+                      + (" — wracam do spisu SEC." if m != "crypto" else " — krypto z data/crypto.csv."), file=sys.stderr)
+                if m == "crypto":
+                    symbols.extend((r["ticker"], r.get("name") or r["ticker"]) for r in load_symbols("data/crypto.csv"))
     if not symbols:
         symbols = _market_symbols(ctx)
     if a.limit:
