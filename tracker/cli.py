@@ -333,7 +333,7 @@ def _cmd_scan(ctx: Context) -> int:
 
 
 def _cmd_alerts(ctx: Context) -> int:
-    from .alerts import DEFAULTS, AlertRun, detect, order, smart_money_alerts
+    from .alerts import DEFAULTS, AlertRun, detect, mark_confluence, order, smart_money_alerts
     from .notify import format_text, send_discord
 
     a, cfg = ctx.args, ctx.config
@@ -378,6 +378,7 @@ def _cmd_alerts(ctx: Context) -> int:
         run.alerts.extend(smart_money_alerts(fresh, portfolio))
         run.warnings.extend(ctx.feed.warnings)
 
+    run.alerts = mark_confluence(run.alerts, int(rules["confluence_min"]))
     fresh_alerts = [x for x in run.alerts if store.is_new_key(x.key)]
     shown = order(run.alerts if a.all else fresh_alerts)
     title = f"Alerty {run.run_date} — {len(shown)} {'łącznie' if a.all else 'nowych'} ({run.checked} instrumentów)"

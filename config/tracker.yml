@@ -58,4 +58,7 @@ alert_rules:
   volume_multiple: 3.0       # wolumen dnia >= 3x średnia 20 sesji
   move_atr_multiple: 2.5     # |zmiana dnia| >= 2,5x ATR(14)
   dip_default_pct: 20        # próg okazji, gdy w okazje.csv brak wartości
+  pivot_window: 5            # lokalny szczyt/dołek = najwyższy/najniższy w oknie ±5 sesji
+  pivot_lookback: 90         # poziomy z ostatnich 90 sesji; gasną po przebiciu
+  confluence_min: 2          # >= 2 różne alerty na spółce tego samego dnia = KONFLUENCJA
 # Powiadomienia: export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."

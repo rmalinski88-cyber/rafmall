@@ -9,7 +9,8 @@ from .alerts import OKAZJA, Alert
 
 MAX_DISCORD = 1900  # Discord caps a message at 2000 characters
 
-ICON = {OKAZJA: "🟢", "wolumen": "📊", "ruch": "⚡", "wybicie": "🚀", "trend": "📈", "smart money": "🕵️"}
+ICON = {OKAZJA: "🟢", "wolumen": "📊", "ruch": "⚡", "wybicie": "🚀", "trend": "📈", "smart money": "🕵️",
+        "poziom": "🔑", "konfluencja": "🔥"}
 
 
 def format_text(alerts: list[Alert], title: str, markdown: bool = True) -> str:

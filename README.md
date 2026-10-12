@@ -317,8 +317,10 @@ portfel, obserwowane i `data/okazje.csv`. Sześć reguł:
 | wybicie | nowy szczyt lub dołek 52 tygodni |
 | trend | kurs przebija SMA50 lub SMA200 |
 | smart money | nowe zgłoszenia insiderów / Kongresu dla portfela i okazji |
+| poziom | kurs przebija lokalny szczyt (opór) lub dołek (wsparcie) z ostatnich 90 sesji; poziom gaśnie po przebiciu |
+| **konfluencja** | ≥ 2 różne alerty na jednej spółce tego samego dnia — najmocniejszy sygnał, idzie na górę |
 
-Alerty z portfela idą pierwsze, potem okazje, potem reszta według nietypowości.
+Alerty z portfela idą pierwsze, potem okazje, potem konfluencje, potem reszta według nietypowości.
 Każdy alert zgłaszany jest raz (stan w `.cache/tracker_alerts_seen.json`).
 
 **Discord:** w ustawieniach kanału → Integracje → Webhooki → Nowy webhook →

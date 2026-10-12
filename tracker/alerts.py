@@ -16,12 +16,16 @@ import pandas as pd
 
 from screener.analysis.technical import atr, sma
 
-OKAZJA, WOLUMEN, RUCH, WYBICIE, TREND, SMART = "okazja", "wolumen", "ruch", "wybicie", "trend", "smart money"
+OKAZJA, WOLUMEN, RUCH, WYBICIE, TREND, SMART, POZIOM = "okazja", "wolumen", "ruch", "wybicie", "trend", "smart money", "poziom"
+KONFLUENCJA = "konfluencja"
 
 DEFAULTS = {
     "volume_multiple": 3.0,  # today's volume vs 20-day average
     "move_atr_multiple": 2.5,  # |daily change| vs ATR(14)
     "dip_default_pct": 20.0,  # buy-the-dip threshold when the CSV gives none
+    "pivot_window": 5,  # a bar is a swing high/low if it tops/bottoms this many bars each side
+    "pivot_lookback": 90,  # how far back swing levels stay "live"
+    "confluence_min": 2,  # alerts on one ticker in one day to call it confluence
 }
 
 
@@ -100,6 +104,20 @@ def detect(ticker: str, name: str, prices: pd.DataFrame, cfg: dict,
                     out.append(Alert(TREND, headline=f"przebicie SMA{span} w dół",
                                      detail=f"kurs {last:.2f}, średnia {b:.2f}", score=1.0 + span / 200, **common))
 
+    # -- swing-level breaks (the "map of highs and lows" idea): every local
+    # high/low from the look-back is a level until price closes through it.
+    for level, side in swing_levels(prices, cfg["pivot_window"], cfg["pivot_lookback"]):
+        if side == "high" and prev <= level < last:
+            out.append(Alert(POZIOM, headline=f"przebicie oporu {level:.2f} w górę",
+                             detail=f"lokalny szczyt z ostatnich {cfg['pivot_lookback']} sesji; kurs {last:.2f}",
+                             score=1.8, **common))
+            break
+        if side == "low" and prev >= level > last:
+            out.append(Alert(POZIOM, headline=f"przebicie wsparcia {level:.2f} w dół",
+                             detail=f"lokalny dołek z ostatnich {cfg['pivot_lookback']} sesji; kurs {last:.2f}",
+                             score=1.8, **common))
+            break
+
     # -- buy-the-dip
     if dip_threshold is not None and len(window) >= 60:
         high = float(window.max())
@@ -115,6 +133,47 @@ def detect(ticker: str, name: str, prices: pd.DataFrame, cfg: dict,
             out.append(Alert(OKAZJA, headline="okazja zakupowa wg Twoich progów",
                              detail="; ".join(why), score=3.0 + drawdown * 10, **common))
     return out
+
+
+def swing_levels(prices: pd.DataFrame, window: int, lookback: int) -> list[tuple[float, str]]:
+    """Unbroken swing highs/lows in the look-back, nearest to the last close first.
+
+    A swing high is a bar whose high beats ``window`` bars on each side; it
+    stays a level until a later close exceeds it (then it is "spent").  The
+    last ``window`` bars cannot be confirmed yet and are skipped.
+    """
+    high = prices["high"].astype(float).to_numpy()
+    low = prices["low"].astype(float).to_numpy()
+    close = prices["close"].astype(float).to_numpy()
+    n = len(close)
+    start = max(window, n - lookback)
+    levels: list[tuple[float, str]] = []
+    for i in range(start, n - window - 1):
+        if high[i] == high[i - window:i + window + 1].max() and close[i + 1:-1].max(initial=-np.inf) <= high[i]:
+            levels.append((float(high[i]), "high"))
+        if low[i] == low[i - window:i + window + 1].min() and close[i + 1:-1].min(initial=np.inf) >= low[i]:
+            levels.append((float(low[i]), "low"))
+    last = close[-1]
+    return sorted(levels, key=lambda lv: abs(lv[0] - last))
+
+
+def mark_confluence(alerts: list[Alert], minimum: int = 2) -> list[Alert]:
+    """Several independent signals on one ticker in one day beat any single one."""
+    by: dict[tuple[str, date | None], list[Alert]] = {}
+    for a in alerts:
+        if a.kind != SMART:
+            by.setdefault((a.ticker, a.day), []).append(a)
+    extra = []
+    for (ticker, day), group in by.items():
+        kinds = {a.kind for a in group}
+        if len(kinds) >= minimum:
+            first = group[0]
+            extra.append(Alert(KONFLUENCJA, ticker=ticker, name=first.name,
+                               headline=f"KONFLUENCJA: {', '.join(sorted(kinds))}",
+                               detail=" | ".join(a.headline for a in group),
+                               score=10.0 + sum(a.score for a in group),
+                               in_portfolio=first.in_portfolio, on_dip_list=first.on_dip_list, day=day))
+    return alerts + extra
 
 
 def smart_money_alerts(trades, portfolio: set[str]) -> list[Alert]:
@@ -136,7 +195,8 @@ def smart_money_alerts(trades, portfolio: set[str]) -> list[Alert]:
 
 
 def order(alerts: list[Alert]) -> list[Alert]:
-    return sorted(alerts, key=lambda a: (not a.in_portfolio, not a.on_dip_list, a.kind != OKAZJA, -a.score, a.ticker))
+    return sorted(alerts, key=lambda a: (not a.in_portfolio, not a.on_dip_list, a.kind != KONFLUENCJA,
+                                         a.kind != OKAZJA, -a.score, a.ticker))
 
 
 @dataclass

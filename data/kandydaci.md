@@ -161,6 +161,15 @@ SPY (akcje USA), QQQ (Nasdaq 100), IWM (małe spółki), EFA (rynki rozwinięte)
 
 Reel finanse_na_sterydach „4 spółki, które dokupuję na spadkach” (4 czerwca): Micron, ASML + dwa loga: „N” na żółtym (prawdopodobnie Nebius), białe „X” (niepewne: Nutanix?). Komenda `tracker alerts` zgłosi, gdy kurs spadnie o próg z pliku poniżej szczytu 52T albo przebije SMA200 w dół.
 
+## Pomysły z reela grimkrit „Mam swojego tradera 24/7”
+
+Zbudował w Claude Code: wskaźnik Pine Script na TradingView (wolumen względny + poziomy ze szczytów/dołków gasnące po przebiciu), alerty na Telegram, automatyczne pozycje na OKX.
+
+- [x] poziomy ze szczytów i dołków gasnące po przebiciu → reguła „poziom” w `tracker alerts`
+- [x] konfluencja (kilka sygnałów naraz) → reguła „konfluencja”
+- [ ] wskaźnik Pine Script na TradingView z tym samym, co alertuje bot — opcjonalnie, na życzenie
+- [ ] **nie bierzemy**: automatycznego składania zleceń. Narzędzie pokazuje, Rafał decyduje.
+
 ## Portfele twórców (tylko jako sygnał, co jest popularne)
 
 - **finanse_na_sterydach**, „3 spółki, które obserwuję w sierpniu”: SoFi (SOFI, fintech), Zeta Global (ZETA, martech AI), CoreWeave (CRWV, chmura GPU). Tylko CoreWeave ma związek z AI-infrastrukturą; SoFi i Zeta nie dotyczą naszego tematu — pomijam.

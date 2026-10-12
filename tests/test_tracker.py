@@ -335,3 +335,31 @@ def test_alerts_command_reports_only_new_on_second_run(offline_config, tmp_path,
     assert "nowych" in first and next(tmp_path.glob("alerts_*.json")).stat().st_size > 0
     assert main(args + ["alerts", "--no-smart", "--out-dir", str(tmp_path)]) == 0
     assert "0 nowych" in capsys.readouterr().out
+
+
+def test_swing_levels_expire_once_broken():
+    from tracker.alerts import swing_levels
+
+    import numpy as np
+    # a clear peak at bar 30, then price stays below it: the level is live
+    closes = np.array([100.0] * 30 + [120.0] + [100.0] * 40)
+    frame = _frame(closes)
+    frame.loc[frame.index[30], "high"] = 121.0
+    live = swing_levels(frame, window=5, lookback=90)
+    assert any(abs(level - 121.0) < 1e-9 and side == "high" for level, side in live)
+    # once a later close exceeds it, it is spent
+    closes2 = closes.copy(); closes2[60:] = 125.0
+    frame2 = _frame(closes2); frame2.loc[frame2.index[30], "high"] = 121.0
+    assert not any(abs(level - 121.0) < 1e-9 for level, _ in swing_levels(frame2, 5, 90))
+
+
+def test_confluence_needs_two_kinds():
+    from tracker.alerts import KONFLUENCJA, Alert, mark_confluence
+    from datetime import date
+
+    d = date(2026, 10, 9)
+    one = [Alert("wolumen", "X", "X", "a", "b", 3.0, day=d)]
+    assert not any(a.kind == KONFLUENCJA for a in mark_confluence(one))
+    two = one + [Alert("poziom", "X", "X", "c", "d", 1.8, day=d)]
+    out = mark_confluence(two)
+    assert any(a.kind == KONFLUENCJA and a.score > 10 for a in out)
