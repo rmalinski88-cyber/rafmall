@@ -25,7 +25,9 @@ on:
         default: ""
   schedule:
     # czas UTC; sesja USA to ok. 13:30-21:00 UTC
-    - cron: "0 14-21 * * 1-5"   # alerts
+    # Minuta 17, nie 0: GitHub pomija przebiegi zaplanowane na pełną godzinę, gdy ma tłok
+    # (13.10.2026 z 8 godzinnych alertów odbyły się 2).
+    - cron: "17 14-21 * * 1-5"  # alerts
     - cron: "40 21 * * 1-5"     # market
     - cron: "50 21 * * 1-5"     # scan
 
@@ -61,7 +63,7 @@ jobs:
         id: pick
         run: |
           case "$SCHEDULE" in
-            "0 14-21 * * 1-5") t=alerts ;;
+            "17 14-21 * * 1-5") t=alerts ;;
             "40 21 * * 1-5")   t=market ;;
             "50 21 * * 1-5")   t=scan ;;
             *)                 t="${INPUT:-check}" ;;

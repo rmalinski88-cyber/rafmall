@@ -51,11 +51,15 @@ Adres narzędzia: **https://rmalinski88-cyber.github.io/rafmall/**
 
 | Kiedy (UTC) | Co | Plik |
 |---|---|---|
-| co godzinę 14–21, pn–pt | `alerts --discord` na Twoich listach | `rafmall.yml` |
+| co godzinę o :17, 14–21, pn–pt | `alerts --discord` na Twoich listach | `rafmall.yml` |
 | 21:40 pn–pt | `market --discord` — setupy na całym rynku | `rafmall.yml` |
 | 21:50 pn–pt | `scan` — nowi inwestorzy (Kongres, insiderzy, 13F) | `rafmall.yml` |
 | 22:20 pn–pt i 06:20 pn–sb | pełna przebudowa stron i JSON → GitHub Pages | `pages.yml` |
 | po każdym pushu do `main` | j.w. | `pages.yml` |
+
+GitHub traktuje harmonogram orientacyjnie: przebiegi przychodzą zwykle z opóźnieniem
+(13.10.2026: 3–8 godzin), a przy tłoku część pomija. Dlatego alerty na żywo daje
+wskaźnik w TradingView, a GitHub odpowiada za dzienny przegląd i stronę.
 
 Ręcznie: GitHub → **Actions** → `rafmall` lub `pages` → *Run workflow*.
 Zadania `rafmall`: `check`, `first_run`, `alerts`, `market`, `scan`, `screener`,

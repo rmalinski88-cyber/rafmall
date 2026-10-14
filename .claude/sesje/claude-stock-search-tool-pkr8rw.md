@@ -1,7 +1,7 @@
 # claude/stock-search-tool-pkr8rw
 
 - **Stan:** w toku
-- **Ostatnia zmiana:** 2026-10-12, chmura
+- **Ostatnia zmiana:** 2026-10-14, chmura
 - **Cel:** narzędzie online na bazie rafmall.ch: wyszukiwarka akcji/ETF/krypto, okazje (wolumen, EMA30, pullback), portfele Trumpa i inwestorów (13F, Kongres, insiderzy); publikacja na GitHub Pages.
 
 ## Zrobione
@@ -20,9 +20,15 @@
   https://rmalinski88-cyber.github.io/rafmall/ zwraca 404; wpisać sekrety `SEC_USER_AGENT`, `DISCORD_WEBHOOK_URL`;
   wkleić prompt z `START.md` §4 do Lovable (podstrona /narzedzie z iframe + kursy Portfela Trumpa z `api/instruments.json`).
 - Scalone do `main` 2026-10-12 (39c9ee4); `pages.yml` buduje stronę po każdym pushu do `main` i 2× dziennie.
+- Stan 14.10: Pages nadal 404, sekrety puste, /narzedzie w Lovable nie istnieje — czeka na użytkownika.
 - Potem: ocena szumu alertów po tygodniu przebiegów (progi w `config/tracker.yml`), Pine Script do sprawdzenia w Pine Editorze.
 
 ## Uwaga dla innych sesji
+- Gałąź domyślna na GitHubie to nadal `claude/stock-search-tool-pkr8rw`, nie `main` (wbrew `CLAUDE.md`):
+  harmonogram Actions bierze workflowy i kod z tej gałęzi. Zmiana ustawienia wymaga zgody użytkownika
+  (sesja dostała odmowę). Do tego czasu ta sesja trzyma `main` == swoja gałąź (fast-forward).
+- Harmonogram GitHuba gubi przebiegi o pełnej godzinie (13.10: 2 z 8 alertów) i opóźnia resztę o 3–8 h;
+  alerty przesunięte na minutę 17.
 - `screener/report/obsidian.py` i `screener/report/views.py` są w toku — nie ruszać bez potrzeby.
 - `data/samples/*.csv` to prawdziwe notowania z zadania `dump`; `ARB-USD` na Yahoo to martwy token, Arbitrum = `ARB11841-USD`.
 - Decyzja o usunięciu scalonych gałęzi roboczych na GitHubie należy do użytkownika.
