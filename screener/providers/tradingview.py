@@ -135,6 +135,23 @@ def to_tradingview(ticker: str) -> str:
     return upper
 
 
+def tradingview_url(ticker: str, exchange: str = "") -> str:
+    """Chart link for a ticker: ``6324.T`` -> ``...?symbol=TSE%3A6324``.
+
+    A US ticker without a known exchange goes in bare (``NVDA``) and
+    TradingView resolves it; Yahoo's class separator becomes a dot
+    (``BRK-B`` -> ``BRK.B``).
+    """
+    from urllib.parse import quote
+
+    symbol = to_tradingview(ticker)
+    if ":" not in symbol:
+        symbol = symbol.replace("-", ".")
+        if exchange:
+            symbol = f"{exchange.upper()}:{symbol}"
+    return "https://www.tradingview.com/chart/?symbol=" + quote(symbol, safe="")
+
+
 def fx_symbol(currency: str) -> str:
     return f"FX_IDC:USD{currency.upper()}"
 
@@ -266,6 +283,23 @@ class TradingViewProvider(DataProvider):
         for column in columns:
             if column not in self.dropped_columns:
                 self.dropped_columns.append(column)
+
+    def scan_columns(self, candidates: dict[str, list[str]], columns: list[str]) -> dict[str, dict]:
+        """``key -> row`` for arbitrary screener columns; rejected columns are dropped and noted.
+
+        ``candidates`` maps a caller's key to TradingView symbols to try
+        (``{"NVDA": ["NASDAQ:NVDA", "NYSE:NVDA"]}``); the first that answers wins.
+        """
+        pending = list(dict.fromkeys(sym for syms in candidates.values() for sym in syms))
+        rows: dict[str, dict] = {}
+        for start in range(0, len(pending), CHUNK_SIZE):
+            rows.update(self._scan(pending[start : start + CHUNK_SIZE], columns))
+        out = {}
+        for key, symbols in candidates.items():
+            hit = next((rows[s] for s in symbols if s in rows), None)
+            if hit is not None:
+                out[key] = hit
+        return out
 
     def raw_row(self, ticker: str) -> dict | None:
         """The screener's row exactly as received - for diagnosing units."""

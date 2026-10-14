@@ -121,6 +121,7 @@
     .wrap { padding: 20px 16px 48px; }
     header h1 { font-size: 1.3rem; }
   }
+.tv{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} .tv:hover{text-decoration-style:solid}
 </style>
 </head>
 <body>
@@ -192,7 +193,7 @@
             <td class="left rank">{{ row.rank }}</td>
             <td class="left">
               <div class="tick-name">{{ row.name }}</div>
-              <div class="sub">{{ row.ticker }} · {{ row.market }}</div>
+              <div class="sub"><a class="tv" href="{{ row.tv_url }}" target="_blank" rel="noopener" title="Wykres w TradingView">{{ row.ticker }} ↗</a> · {{ row.market }}</div>
             </td>
             <td class="left"><span class="pill">{{ row.segment }}</span></td>
             <td class="num"><b>{{ row.composite }}</b></td>

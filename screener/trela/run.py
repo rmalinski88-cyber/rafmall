@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from ..providers.tradingview import tradingview_url
 from ..report import format as fmt
 from .data import Readings, fetch_readings
 from .scoring import CompanyScore, Model, load_model, score_universe
@@ -38,7 +39,10 @@ def run_trela(universe, model: Model, fetch, progress=None, workers: int = 1,
 
     names = dict(zip(universe["ticker"], universe.get("name", universe["ticker"])))
     humanoid = dict(zip(universe["ticker"], universe["humanoid"])) if "humanoid" in universe else {}
+    exchanges = dict(zip(universe["ticker"], universe["exchange"])) if "exchange" in universe else {}
     for ticker, r in readings.items():
+        if isinstance(exchanges.get(ticker), str):
+            r.exchange = exchanges[ticker]
         if names.get(ticker) and names[ticker] != ticker:
             r.name = names[ticker]
         r.humanoid = bool(humanoid.get(ticker, False))
@@ -142,15 +146,24 @@ def split_by_pt_data(scores: list[CompanyScore]) -> tuple[list[CompanyScore], li
     """
     full, partial = [], []
     for s in scores:
-        (partial if all(s.readings.get(r) is None for r in PT_RULES) else full).append(s)
+        (full if has_value_history(s) else partial).append(s)
     partial.sort(key=lambda s: (s.flagged, -available_pct(s), s.ticker))
     return full, partial
 
 
+def has_value_history(s: CompanyScore) -> bool:
+    """Target history long enough for the big value rules (40 of 41 points).
+
+    The 45-day drawdown alone (TradingView history grows from the first
+    snapshot) flags a cut but does not make the value pillar comparable.
+    """
+    return any(s.readings.get(r) is not None for r in ("pt_change_180d", "upside_vs_history"))
+
+
 def available_pct(s: CompanyScore) -> float:
-    value_max = s.pillars.get("value", (0, 0))[1]
+    value_got, value_max = s.pillars.get("value", (0, 0))
     available = s.max_total - value_max
-    return (s.total / available) if available else 0.0
+    return ((s.total - value_got) / available) if available else 0.0
 
 
 PT_MISSING_WARN = 0.30   # above this share without target history the Value pillar is not trustworthy
@@ -170,7 +183,7 @@ def run_summary(scores, readings, source: str = "") -> list[str]:
         lines.append(f"UWAGA: Yahoo nie zwróciło danych dla {len(failed)} spółek (limit zapytań?) — "
                      "ich nie ma w rankingu; powtórz przebieg później.")
     if scores:
-        no_pt = sum(1 for s in scores if all(s.readings.get(r) is None for r in PT_RULES))
+        no_pt = sum(1 for s in scores if not has_value_history(s))
         if no_pt / len(scores) > PT_MISSING_WARN:
             lines.append(f"UWAGA: {no_pt} z {len(scores)} spółek bez historii cen docelowych z Yahoo — "
                          "filar Wycena (41 pkt) jest dla nich pusty, ranking mniej wiarygodny.")
@@ -246,7 +259,8 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
         writer = csv.writer(handle)
         writer.writerow(["pozycja", "ticker", "nazwa", "wynik_pct", "excel_pct", "punkty", "maksimum",
                          "flagi", "braki", "upside_teraz", "humanoid", *[f"odczyt_{i}" for i in rule_ids],
-                         *[f"pkt_{i}" for i in rule_ids], "uwagi", "lata_od_ipo", "cena_docelowa"])
+                         *[f"pkt_{i}" for i in rule_ids], "uwagi", "lata_od_ipo", "cena_docelowa", "gielda",
+                         "tradingview"])
         for i, s in enumerate(scores, start=1):
             r = readings[s.ticker]
             writer.writerow([
@@ -256,6 +270,7 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
                 *[_round(s.readings.get(rid)) for rid in rule_ids],
                 *[_round(s.points.get(rid)) for rid in rule_ids],
                 " | ".join(r.notes), _round(r.years_since_ipo), _round(r.price_target),
+                r.exchange, tradingview_url(s.ticker, r.exchange),
             ])
         for r in readings.values():
             if r.prefiltr or r.empty:
@@ -264,7 +279,8 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
                                  _round(r.upside_now), int(r.humanoid),
                                  *[_round(r.values.get(rid)) for rid in rule_ids],
                                  *["" for _ in rule_ids], " | ".join(r.notes),
-                                 _round(r.years_since_ipo), _round(r.price_target)])
+                                 _round(r.years_since_ipo), _round(r.price_target),
+                                 r.exchange, tradingview_url(r.ticker, r.exchange)])
 
 
 PREFILTER_MARK = "filtr wstępny: "
@@ -286,10 +302,12 @@ def read_csv_readings(path: Path, model: Model) -> tuple[pd.DataFrame, dict[str,
                 price_target=_float(row.get("cena_docelowa")),
                 humanoid=row.get("humanoid") == "1",
                 prefiltr=flags[len(PREFILTER_MARK):] if flags.startswith(PREFILTER_MARK) else "",
+                exchange=row.get("gielda") or "",
             )
     universe = pd.DataFrame({
         "ticker": list(readings), "name": [r.name for r in readings.values()],
         "humanoid": [r.humanoid for r in readings.values()],
+        "exchange": [r.exchange for r in readings.values()],
     })
     return universe, readings
 
@@ -336,7 +354,7 @@ def write_html(scores, dropped, readings, model: Model, path: Path, source: str 
                    + escape(", ".join(r.ticker for r in failed)) + "</p>")
     cut = [r for r in readings.values() if r.prefiltr]
     if cut:
-        items = "".join(f"<li><b>{escape(r.ticker)}</b> {escape(r.name or '')}: "
+        items = "".join(f"<li><b>{_tv_link(r.ticker, r.exchange)}</b> {escape(r.name or '')}: "
                         f"<span class='sub'>{escape(r.prefiltr)}</span></li>" for r in cut)
         tables += (f"<h2>Odrzucone przez filtr wstępny ({len(cut)})</h2><details><summary>pokaż</summary>"
                    f"<ul class='note'>{items}</ul></details>")
@@ -367,7 +385,7 @@ def _html_table(scores, readings, model: Model, use_available: bool, positions=N
                   if above else f"<td class='num'>{fmt.pct(r.upside_now, signed=True)}</td>")
         rows.append(
             f"<tr class='{state}'><td class='num'>{i}</td>"
-            f"<td><b>{escape(r.name or s.ticker)}</b>{tag}<div class='sub'>{escape(s.ticker)}</div>{flags}</td>"
+            f"<td><b>{escape(r.name or s.ticker)}</b>{tag}<div class='sub'>{_tv_link(s.ticker, r.exchange)}</div>{flags}</td>"
             f"<td class='num score'>{shown * 100:.1f}%</td>{cells}{upside}"
             f"<td><details><summary>{len(s.missing)} braków</summary><ul>{detail}</ul>"
             f"{'<ul class=sub>' + notes + '</ul>' if notes else ''}</details></td></tr>"
@@ -406,6 +424,7 @@ th{{color:var(--sub);font-size:.74rem;text-transform:uppercase;letter-spacing:.0
 tr.green .score{{color:var(--good)}} tr.red .score{{color:var(--bad)}} tr.flag{{opacity:.6}}
 .flags{{color:var(--bad);font-size:.78rem}} details ul{{margin:6px 0;padding-left:18px}}
 .bad{{color:var(--bad)}} .warn{{color:var(--bad);font-weight:600}}
+.tv{{color:inherit;text-decoration:underline dotted;text-underline-offset:2px}} .tv:hover{{text-decoration-style:solid}}
 .tag{{font-size:.7rem;padding:1px 6px;border-radius:8px;border:1px solid var(--line);color:var(--sub);margin-left:6px}}
 </style></head><body><div class="wrap">
 <h1>{escape(model.name)}</h1>
@@ -419,6 +438,11 @@ zmiana w 5 lat przeliczona ze średniorocznego tempa, gdy sprawozdań jest mniej
 z historii rekomendacji analityków. To podpowiedź do ręcznego przeglądu, nie rekomendacja inwestycyjna.</p>
 </div></body></html>"""
     path.write_text(html, encoding="utf-8")
+
+
+def _tv_link(ticker: str, exchange: str = "") -> str:
+    return (f"<a class='tv' href='{escape(tradingview_url(ticker, exchange))}' target='_blank' rel='noopener' "
+            f"title='Wykres w TradingView'>{escape(ticker)} ↗</a>")
 
 
 def _fmt_points(value) -> str:
@@ -460,16 +484,21 @@ def cmd_trela(args, config, universe) -> int:
         source = f"odtworzone z {Path(from_csv).name} (bez ponownego pobierania)"
         fetch, prefilter = stored.__getitem__, False   # the stored cut (Readings.prefiltr) stays as it was
     else:
-        def fetch(ticker):
-            return fetch_with_retry(
-                lambda: fetch_readings(ticker, fx_source.get_fx_to_usd,
-                                       cut=(lambda v: prefilter_reason(v, model.prefilter)) if prefilter else None))
-
         if universe is None:
             universe, source = us_universe(model.prefilter.get("market_cap", 10e9))
             prefilter = True
         else:
             source, prefilter = f"plik ({len(universe)} spółek), bez filtra wstępnego", False
+
+        targets = _tradingview_targets(universe, config, extra=getattr(args, "tylko_cele", False))
+        if getattr(args, "tylko_cele", False):
+            return 0   # daily snapshot only: the history is what the monthly run needs
+        source += "; cele analityków bez historii u Yahoo (np. Azja): TradingView"
+
+        def fetch(ticker):
+            return targets.fill(fetch_with_retry(
+                lambda: fetch_readings(ticker, fx_source.get_fx_to_usd,
+                                       cut=(lambda v: prefilter_reason(v, model.prefilter)) if prefilter else None)))
     print(f"Model Treli: {len(universe)} spółek — {source}", file=sys.stderr)
 
     def progress(position, total, ticker):
@@ -497,6 +526,36 @@ def cmd_trela(args, config, universe) -> int:
     return 0
 
 
+def _tradingview_targets(universe, config, extra: bool = False):
+    """Today's TradingView consensus for the universe, stored in the target history.
+
+    ``extra`` (the daily snapshot job) also covers the humanoid list, so
+    Asian names build their history between monthly runs.
+    """
+    from .targets import TargetHistory, TradingViewTargets
+    from .universe import HUMANOID_LIST
+
+    history = TargetHistory(Path(config.get("cache_dir", ".cache")) / "trela_cele.csv")
+    targets = TradingViewTargets(history)
+    tickers = list(universe["ticker"])
+    exchanges = {}
+    if "exchange" in universe:
+        exchanges = {t: e for t, e in zip(universe["ticker"], universe["exchange"]) if isinstance(e, str)}
+    if extra:
+        try:
+            tickers += [t for t in pd.read_csv(HUMANOID_LIST, comment="#")["ticker"].dropna() if t not in tickers]
+        except (OSError, ValueError):
+            pass
+    found = targets.prefetch(tickers, exchanges)
+    history.save()
+    print(f"TradingView: cele analityków dla {found} z {len(tickers)} spółek; historia celów: "
+          f"{history.frame['date'].nunique()} dni, {history.frame['ticker'].nunique()} spółek "
+          f"({history.path})", file=sys.stderr)
+    for note in targets.notes:
+        print(f"  {note}", file=sys.stderr)
+    return targets
+
+
 def discord_summary(scores, readings, model: Model, source: str = "", top: int = 15) -> str:
     """Short ranking for a Discord channel: top of the list and the humanoid names."""
     for s in scores:
@@ -509,7 +568,9 @@ def discord_summary(scores, readings, model: Model, source: str = "", top: int =
         r = readings[s.ticker]
         upside = "" if r.upside_now is None else f", upside {r.upside_now * 100:+.0f}%"
         warn = " ⚠ cena ≥ cel" if r.upside_now is not None and r.upside_now <= 0 else ""
-        lines.append(f"{i}. **{s.ticker}** {r.name} — {s.pct * 100:.1f}%{upside}{warn}")
+        # <url> keeps Discord from unfurling fifteen chart previews.
+        lines.append(f"{i}. **[{s.ticker}](<{tradingview_url(s.ticker, r.exchange)}>)** {r.name} — "
+                     f"{s.pct * 100:.1f}%{upside}{warn}")
     tagged = humanoid_positions(full)
     if tagged:
         lines += ["", "Humanoidy: " + ", ".join(

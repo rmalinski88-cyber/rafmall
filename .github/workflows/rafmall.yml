@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, probe, site, peek, dump]
+        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, trela_cele, probe, site, peek, dump]
       url:
         description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
@@ -34,6 +34,10 @@ on:
     # Trela rebalansuje co kwartał, ok. 3 tygodnie po starcie sezonu wyników: przebiegi z 7 lutego,
     # maja, sierpnia i listopada to te do rebalansu.
     - cron: "13 13 7 * *"       # trela
+    - cron: "43 14 7 * *"       # trela_lista (humanoidy z Azji, cele z TradingView)
+    # Codziennie po sesji azjatyckiej: zdjęcie celów analityków z TradingView. Z tych zdjęć rośnie
+    # historia celów dla Azji (Yahoo jej nie ma): spadek 45 dni po ~45 dniach, zmiana 180 dni po ~180.
+    - cron: "23 9 * * 1-5"      # trela_cele
 
 permissions:
   contents: read
@@ -72,6 +76,8 @@ jobs:
             "40 21 * * 1-5")   t=market ;;
             "50 21 * * 1-5")   t=scan ;;
             "13 13 7 * *")     t=trela ;;
+            "43 14 7 * *")     t=trela_lista ;;
+            "23 9 * * 1-5")    t=trela_cele ;;
             *)                 t="${INPUT:-check}" ;;
           esac
           echo "zadanie=$t" >> "$GITHUB_OUTPUT"
@@ -112,7 +118,12 @@ jobs:
               echo "=== TRELA CSV ==="; cat out/trela_*.csv; echo "=== KONIEC CSV ==="
               ;;
             # Ten sam model na globalnej liście humanoidów (Azja bez historii cen docelowych).
-            trela_lista) python -m screener --universe data/universe_humanoid_global.csv trela ;;
+            trela_lista)
+              python -m screener --universe data/universe_humanoid_global.csv trela --discord
+              echo "=== TRELA CSV ==="; cat out/trela_*.csv; echo "=== KONIEC CSV ==="
+              ;;
+            # Tylko zapis dzisiejszych celów analityków (rynek USA + lista humanoidów) do .cache.
+            trela_cele) python -m screener trela --tylko-cele ;;
             # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').
             probe) python scripts/probe_yahoo.py ${DUMP_SYMBOLS:-NVDA TSM 6324.T} ;;
             site)

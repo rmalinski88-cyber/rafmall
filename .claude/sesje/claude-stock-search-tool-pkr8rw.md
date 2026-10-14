@@ -28,6 +28,10 @@
   0 błędów pobierania (2 wątki + ponowienia; przy 4 wątkach Yahoo blokowało po ~375). Strona:
   https://claude.ai/artifact/YGXgrcgCH3L8Ca1psUCKjs. Sesja w chmurze nie pobiera artefaktów: CSV idzie do logu,
   raport odtwarza `python -m screener trela --z-csv PLIK`.
+- Azja w modelu Treli: cele analityków z TradingView (`screener/trela/targets.py`, pola `price_target_*` —
+  nazwy niepotwierdzone, provider odrzuca nieznane i zgłasza), historia w `.cache/trela_cele.csv` (cache Actions),
+  zadanie `trela_cele` w dni robocze 9:23 UTC, `trela_lista` 7. dnia miesiąca. Linki TradingView w raportach
+  (`tradingview_url` w `screener/providers/tradingview.py`). Apify: nie podpięte (koszt — decyzja użytkownika).
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego

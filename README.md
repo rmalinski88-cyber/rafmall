@@ -207,7 +207,12 @@ python -m screener --universe data/universe_humanoid_global.csv trela   # własn
 Reguły i progi: `config/trela.yml` (z notatek kursu, gałąź `docs/treli`); kod: `screener/trela/`.
 Spółki z listy humanoidów są oznaczone i nigdy nie odpadają na filtrze wstępnym. Dane: Yahoo (prognozy,
 sprawozdania, historia cen docelowych), lista spółek: skaner TradingView. W Actions: zadanie `trela`,
-samo co miesiąc 7. dnia (luty/maj/sierpień/listopad = rebalans kwartalny).
+samo co miesiąc 7. dnia (luty/maj/sierpień/listopad = rebalans kwartalny), oraz `trela_lista` (humanoidy z Azji).
+
+Cele analityków dla Azji: Yahoo nie ma ich historii, więc bieżący konsensus bierzemy z TradingView, a zadanie
+`trela_cele` (dni robocze) zapisuje go do `.cache/trela_cele.csv`. Z tej historii liczą się reguły wyceny:
+spadek celu w 45 dni (po ~45 dniach zapisów), zmiana w 180 dni (po ~180), kanał upside (po ~2 latach).
+Przy każdym tickerze w raportach jest link do wykresu w TradingView.
 
 ## Eksport do Obsidiana
 

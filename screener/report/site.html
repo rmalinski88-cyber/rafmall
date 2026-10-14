@@ -117,6 +117,7 @@
     .wrap { padding: 20px 16px 48px; }
     header h1 { font-size: 1.3rem; }
   }
+.tv{color:inherit;text-decoration:underline dotted;text-underline-offset:2px} .tv:hover{text-decoration-style:solid}
 </style>
 <style>
   .hero p.lead { max-width: 760px; color: var(--text-secondary); margin: 8px 0 0; }
@@ -188,7 +189,7 @@
         <tbody>
         {% for r in seg.rows %}
           <tr data-ticker="{{ r.ticker }}" data-market="{{ r.market }}" data-text="{{ (r.name ~ ' ' ~ r.ticker ~ ' ' ~ r.notes ~ ' ' ~ r.market)|lower }}">
-            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub">{{ r.ticker }}{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
+            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub"><a class="tv" href="{{ r.tv_url }}" target="_blank" rel="noopener" title="Wykres w TradingView">{{ r.ticker }} ↗</a>{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
             <td class="left">{{ r.market }}</td>
             <td class="num"><b>{{ r.score }}</b>{% if r.excluded %}<div class="sub">{{ r.excluded }}</div>{% endif %}</td>
             <td class="num">{{ r.last_close }} <span class="sub">{{ r.currency }}</span></td>
@@ -225,7 +226,7 @@
         <tbody>
         {% for r in seg.rows %}
           <tr data-ticker="{{ r.ticker }}" data-market="{{ r.market }}" data-text="{{ (r.name ~ ' ' ~ r.ticker ~ ' ' ~ r.notes ~ ' ' ~ r.market ~ ' ' ~ r.segment)|lower }}">
-            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub">{{ r.ticker }}{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
+            <td class="left"><div class="tick-name">{{ r.name }}</div><div class="sub"><a class="tv" href="{{ r.tv_url }}" target="_blank" rel="noopener" title="Wykres w TradingView">{{ r.ticker }} ↗</a>{% if r.confidence == 'medium' %} · <span class="pill conf-medium">do weryfikacji</span>{% endif %}</div></td>
             <td class="left">{{ r.market }}</td>
             <td class="left"><span class="pill">{{ r.segment }}</span></td>
             <td class="num"><b>{{ r.score }}</b>{% if r.excluded %}<div class="sub">{{ r.excluded }}</div>{% endif %}</td>

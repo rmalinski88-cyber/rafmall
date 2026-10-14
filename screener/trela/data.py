@@ -40,6 +40,7 @@ class Readings:
     upside_now: float | None = None
     price_target: float | None = None
     humanoid: bool = False
+    exchange: str = ""                              # TradingView exchange code, when known (US scan)
     prefiltr: str = ""                              # why Trela's screener cut it; "" = passed
 
     @property

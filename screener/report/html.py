@@ -10,6 +10,7 @@ from markupsafe import Markup
 
 from ..pipeline import ScreenResult
 from . import format as fmt
+from ..providers.tradingview import tradingview_url
 from .charts import SERIES_1, SERIES_2, quadrant_scatter, score_bar, sparkline
 
 TEMPLATE_DIR = Path(__file__).parent
@@ -85,6 +86,7 @@ def _row(position: int, record: dict, result: ScreenResult) -> dict:
     return {
         "rank": position,
         "ticker": ticker,
+        "tv_url": tradingview_url(ticker),
         "name": record.get("name") or ticker,
         "market": record.get("market") or fmt.DASH,
         "segment": record.get("segment") or fmt.DASH,

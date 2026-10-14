@@ -94,6 +94,8 @@ def build_parser() -> argparse.ArgumentParser:
     trela.add_argument("--workers", type=int, default=2, help="równoległe pobrania z Yahoo (domyślnie 2)")
     trela.add_argument("--discord", action="store_true", help="wyślij skrót na Discord (DISCORD_WEBHOOK_URL)")
     trela.add_argument("--z-csv", help="odtwórz raport z CSV poprzedniego przebiegu, bez pobierania danych")
+    trela.add_argument("--tylko-cele", action="store_true",
+                       help="tylko zapisz dzisiejsze cele analityków z TradingView (historia dla Azji)")
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")

@@ -16,6 +16,7 @@ from markupsafe import Markup
 
 from ..pipeline import ScreenResult
 from . import format as fmt
+from ..providers.tradingview import tradingview_url
 from .charts import sparkline
 
 TEMPLATE_DIR = Path(__file__).parent
@@ -131,6 +132,7 @@ def _row(record: dict, result: ScreenResult, signal: dict | None) -> dict:
     score = record.get("composite_score")
     return {
         "ticker": ticker,
+        "tv_url": tradingview_url(ticker),
         "name": record.get("name") or ticker,
         "market": record.get("market") or "",
         "segment": record.get("segment") or "",

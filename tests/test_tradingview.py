@@ -324,3 +324,14 @@ def test_hybrid_falls_back_to_tradingview_indicators_without_history(universe, c
     result = run_screen(universe.head(8), provider, config, profile_name="growth")
     assert result.prices == {}
     assert result.ranked["technical_score"].notna().all()
+
+
+def test_chart_links_for_every_market():
+    from screener.providers.tradingview import tradingview_url
+
+    base = "https://www.tradingview.com/chart/?symbol="
+    assert tradingview_url("6324.T") == base + "TSE%3A6324"
+    assert tradingview_url("0020.HK") == base + "HKEX%3A20"
+    assert tradingview_url("2330.TW") == base + "TWSE%3A2330"
+    assert tradingview_url("NVDA", "NASDAQ") == base + "NASDAQ%3ANVDA"
+    assert tradingview_url("BRK-B") == base + "BRK.B"
