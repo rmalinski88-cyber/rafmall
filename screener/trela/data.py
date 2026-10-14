@@ -120,6 +120,62 @@ def consensus_targets(actions: pd.DataFrame, dates, lookback_days: int = PT_LOOK
     return pd.Series(out, index=dates)
 
 
+def adjust_for_splits(actions: pd.DataFrame, splits: pd.Series | None) -> pd.DataFrame:
+    """Targets restated in today's shares.
+
+    Yahoo's closing prices are split-adjusted, its price targets are not:
+    NVDA's targets before the 10:1 split of June 2024 are ten times today's
+    scale, which would read as a 90% target cut and a huge historic upside.
+    """
+    if actions is None or actions.empty or splits is None or len(splits) == 0:
+        return actions
+    ratios = pd.to_numeric(splits, errors="coerce")
+    ratios.index = pd.DatetimeIndex(ratios.index).tz_localize(None)
+    ratios = ratios[ratios > 0]
+    if ratios.empty:
+        return actions
+    out = actions.copy()
+    when = pd.DatetimeIndex(out.index).tz_localize(None)
+    factor = pd.Series(1.0, index=range(len(out)))
+    for day, ratio in ratios.items():
+        factor[when < day] *= float(ratio)
+    out["currentPriceTarget"] = pd.to_numeric(out["currentPriceTarget"], errors="coerce") / factor.to_numpy()
+    return out
+
+
+def anchored_drawdown(actions: pd.DataFrame, today, days: int = 45,
+                      lookback_days: int = PT_LOOKBACK_DAYS) -> float | None:
+    """Worst fall of the consensus within ``days``, counting only real target cuts.
+
+    The firm set is fixed at the start of the window: a high target that
+    merely expires, or a new firm initiating low, changes the plain mean
+    without any analyst cutting - Trela's rule is about cuts.
+    """
+    if actions is None or actions.empty or "currentPriceTarget" not in actions.columns:
+        return None
+    frame = actions[["Firm", "currentPriceTarget"]].copy()
+    frame.index = pd.DatetimeIndex(frame.index).tz_localize(None)
+    frame["currentPriceTarget"] = pd.to_numeric(frame["currentPriceTarget"], errors="coerce")
+    frame = frame[frame["currentPriceTarget"] > 0].sort_index()
+
+    today = pd.Timestamp(today)
+    if today.tzinfo is not None:
+        today = today.tz_localize(None)
+    start = today - pd.Timedelta(days=days)
+    at_start = frame[(frame.index <= start) & (frame.index > start - pd.Timedelta(days=lookback_days))]
+    firms = set(at_start["Firm"])
+    if not firms:
+        return None
+    frame = frame[frame["Firm"].isin(firms) & (frame.index > start - pd.Timedelta(days=lookback_days))]
+    days_in_window = pd.date_range(start, today, freq="D")
+    values = []
+    for day in days_in_window:
+        latest = frame[frame.index <= day].groupby("Firm")["currentPriceTarget"].last()
+        values.append(float(latest.mean()))
+    series = pd.Series(values, index=days_in_window)
+    return float((series / series.cummax() - 1.0).min())
+
+
 def pt_change(consensus: pd.Series, days: int = 180) -> float | None:
     """Change of the consensus target over the last ``days``."""
     series = consensus.dropna()
@@ -178,8 +234,9 @@ def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) ->
     eps = info.get("trailingEps")
     income = _safe(lambda: t.income_stmt, pd.DataFrame())
     eps_currency_fx = fx
-    if eps is None and _row(income, "Basic EPS") is not None:
-        eps = _row(income, "Basic EPS").dropna().iloc[0] if not _row(income, "Basic EPS").dropna().empty else None
+    if eps is None and _latest(income, "Basic EPS") is not None:
+        # Newest fiscal year; Yahoo's column order is not guaranteed.
+        eps = _latest(income, "Basic EPS")
         fin_currency = (info.get("financialCurrency") or r.currency).upper()
         eps_currency_fx = fx_to_usd(fin_currency) if fin_currency else None
         r.notes.append("EPS z ostatniego sprawozdania rocznego (brak TTM)")
@@ -227,6 +284,8 @@ def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) ->
     if first_ms:
         r.years_since_ipo = (today - pd.Timestamp(first_ms, unit="ms")).days / 365.25
 
+    # Yahoo's own consensus; replaced below by the rebuilt one when there is
+    # target history, so the upside shown is the upside that was scored.
     r.price_target = info.get("targetMeanPrice")
     price = info.get("currentPrice") or info.get("regularMarketPrice")
     if r.price_target and price:
@@ -236,9 +295,10 @@ def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) ->
         v["pt_change_180d"] = v["pt_drawdown_45d"] = v["upside_vs_history"] = None
         r.notes.append("brak historii cen docelowych u Yahoo")
     else:
+        actions = adjust_for_splits(actions, _safe(lambda: t.splits, None))
         daily = consensus_targets(actions, pd.date_range(today - pd.Timedelta(days=200), today, freq="D"))
         v["pt_change_180d"] = pt_change(daily, 180)
-        v["pt_drawdown_45d"] = pt_max_drawdown(daily, 45)
+        v["pt_drawdown_45d"] = anchored_drawdown(actions, today, 45)
         v["upside_vs_history"] = _upside_channel(actions, history, today, r)
 
     return r
@@ -247,7 +307,9 @@ def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) ->
 def _upside_channel(actions, history, today, readings: Readings) -> float | None:
     if history is None or history.empty or "Close" not in history:
         return None
-    close = history["Close"].copy()
+    close = history["Close"].dropna().copy()
+    if close.empty:
+        return None
     close.index = pd.DatetimeIndex(close.index).tz_localize(None)
     months = pd.date_range(today - pd.DateOffset(years=UPSIDE_HISTORY_YEARS), today, freq="ME")
     targets = consensus_targets(actions, months)
@@ -256,6 +318,9 @@ def _upside_channel(actions, history, today, readings: Readings) -> float | None
     now_target = consensus_targets(actions, [today]).iloc[0]
     now_price = float(close.iloc[-1])
     current = (now_target / now_price - 1.0) if now_target == now_target and now_price else None
+    if current is not None:
+        readings.price_target = float(now_target)
+        readings.upside_now = current
     position = channel_position(current, upside)
     if position is None and current is not None:
         readings.notes.append(f"upside: za krótka historia ({len(upside)} mies.)")

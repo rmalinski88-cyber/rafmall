@@ -11,9 +11,11 @@ Rules (from the course notes, see ``config/trela.yml``):
   end of the list regardless of its points;
 * a missing reading scores 0 and is listed, but never flags or excludes a
   company ("Tolerance for Low Scores & Missing Data: Full");
-* a rule with no reading for *any* company in the run cannot be computed
-  from the available data at all, so it is dropped from the maximum rather
-  than costing everyone the same points - the report names it.
+* a rule the data source never publishes (``aktywna: false`` in the model)
+  is left out of the maximum for every company - the report names it.  This
+  is fixed in the model, not inferred from the run, so a company's % does
+  not change with the list it is scored on;
+* must-have rules are pass/fail.
 """
 
 from __future__ import annotations
@@ -38,15 +40,29 @@ class Rule:
     must_have: bool = False
     inclusive_worst: bool = False
     pewnosc: str = ""
+    # False = the data source never publishes this reading; the rule is left
+    # out of the maximum for every company, so a score does not depend on
+    # which other companies happen to be on the list.
+    aktywna: bool = True
+    uwaga: str = ""
 
     def points(self, value) -> float | None:
-        """Linear points for ``value``; ``None`` when the reading is missing."""
+        """Points for ``value``; ``None`` when the reading is missing.
+
+        Must-have rules are pass/fail: the full point or nothing.  A linear
+        ramp between e.g. 0,50 and 0,51 USD EPS would hand out fractions for
+        a condition that is either met or not.
+        """
         if value is None or (isinstance(value, float) and math.isnan(value)):
             return None
         value = float(value)
         ascending = self.best >= self.worst
-        if self.inclusive_worst and value == self.worst:
-            return float(self.max)
+        if self.must_have:
+            if self.inclusive_worst:
+                passes = value >= self.worst if ascending else value <= self.worst
+            else:
+                passes = value > self.worst if ascending else value < self.worst
+            return float(self.max) if passes else 0.0
         if ascending:
             if value <= self.worst:
                 return 0.0
@@ -115,6 +131,11 @@ class CompanyScore:
         return bool(self.flags)
 
     @property
+    def no_data(self) -> bool:
+        """Most rules unreadable: a fetch failure, not a weak company."""
+        return len(self.missing) * 2 > len(self.points)
+
+    @property
     def excel_pct(self) -> float:
         """Excel variant: Growth, Fundamentals and Value as fractions of their max, averaged."""
         parts = [p / m for name, (p, m) in self.pillars.items() if name != "must_have" and m]
@@ -152,23 +173,22 @@ def score_company(ticker: str, readings: dict, model: Model, active: set[str] | 
 
 def score_universe(readings_by_ticker: dict, model: Model,
                    years_since_ipo: dict | None = None) -> tuple[list[CompanyScore], list[Rule]]:
-    """Score every company; returns ``(ranked scores, rules dropped for lack of data)``.
+    """Score every company; returns ``(ranked scores, rules left out of the maximum)``.
 
     Ranking: unflagged companies by total (Scrab formula), then flagged ones,
-    also by total - a flag sends a company to the end of the list.
+    also by total - a flag sends a company to the end of the list; companies
+    whose data could not be read come last of all, so a fetch failure never
+    looks better than a real flag.
     """
     years_since_ipo = years_since_ipo or {}
-    dropped = [
-        r for r in model.rules
-        if all(_missing(readings.get(r.id)) for readings in readings_by_ticker.values())
-    ]
-    active = {r.id for r in model.rules} - {r.id for r in dropped}
+    dropped = [r for r in model.rules if not r.aktywna]
+    active = {r.id for r in model.rules if r.aktywna}
 
     scores = [
         score_company(t, readings, model, active, years_since_ipo.get(t))
         for t, readings in readings_by_ticker.items()
     ]
-    scores.sort(key=lambda s: (s.flagged, -s.pct, s.ticker))
+    scores.sort(key=lambda s: (s.no_data, s.flagged, -s.pct, s.ticker))
     return scores, dropped
 
 

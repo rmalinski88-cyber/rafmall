@@ -73,12 +73,27 @@ def test_missing_reading_scores_zero_but_never_flags(model):
     assert not score.flagged
 
 
-def test_rule_with_no_data_anywhere_leaves_the_maximum(model):
-    readings = {"A": {"altman": 2.0}, "B": {"altman": 3.0}}
-    scores, dropped = score_universe(readings, model)
-    assert "altman" not in {r.id for r in dropped}
-    assert scores[0].max_total == 30
-    assert "cfo_est_2y" in {r.id for r in dropped}
+def test_inactive_rules_leave_the_maximum_regardless_of_the_list(model):
+    # The maximum is fixed by the model, not by which companies happen to be
+    # scored together: a company's % must not change when the list changes.
+    alone, dropped = score_universe({"A": {"altman": 2.0}}, model)
+    together, _ = score_universe({"A": {"altman": 2.0}, "B": {"altman": 3.0, "eps_est_5y": 0.5}}, model)
+    assert {r.id for r in dropped} == {"eps_est_5y", "cfo_est_2y"}
+    assert alone[0].max_total == 119
+    a = next(s for s in together if s.ticker == "A")
+    assert a.pct == alone[0].pct
+    assert "eps_est_5y" not in a.points
+
+
+def test_company_without_data_ranks_below_flagged_ones(model):
+    flagged = {"altman": 4.0, "market_cap": 1e9, "eps_analysts": 10, "eps_ttm": 2.0,
+               "pt_drawdown_45d": 0.0, "revenue_5y": 1.0, "revenue_est_2y": 0.3,
+               "eps_5y": 2.5, "eps_est_2y": 0.4, "cfo_5y": 2.5, "ebitda_margin": 0.4,
+               "pt_change_180d": 0.2, "upside_vs_history": 1.0}
+    empty = {"altman": 4.0}
+    scores, _ = score_universe({"A": empty, "B": flagged}, model)
+    assert [s.ticker for s in scores] == ["B", "A"]
+    assert scores[1].no_data and not scores[0].no_data
 
 
 def test_young_listing_is_flagged(model):

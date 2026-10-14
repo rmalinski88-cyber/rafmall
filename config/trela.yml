@@ -45,6 +45,9 @@ rules:
     worst: 0.15
     best: 0.30
     pewnosc: slajd
+    # Yahoo zwraca LTG tylko dla nielicznych spółek (probe 14.10: puste dla TSM).
+    aktywna: false
+    uwaga: "brak prognoz 5-letnich w źródle danych"
   - id: cfo_5y
     filar: growth
     nazwa: "Gotówka operacyjna (CFO), zmiana w 5 lat"
@@ -59,6 +62,8 @@ rules:
     worst: 0.15
     best: 0.30
     pewnosc: nagranie
+    aktywna: false
+    uwaga: "Yahoo nie publikuje prognoz przepływów pieniężnych"
   - id: ebitda_margin
     filar: growth
     nazwa: "Marża EBITDA (TTM)"

@@ -6,7 +6,9 @@ import pandas as pd
 import pytest
 
 from screener.trela.data import (
+    adjust_for_splits,
     altman_z_nonmanufacturing,
+    anchored_drawdown,
     average_growth,
     change_over_years,
     channel_position,
@@ -84,6 +86,31 @@ def test_pt_change_and_drawdown():
     series = pd.Series(values, index=days)
     assert pt_change(series, 180) == pytest.approx(0.20)
     assert pt_max_drawdown(series, 45) == pytest.approx(120 / 130 - 1)
+
+
+def test_targets_before_a_split_are_restated():
+    actions = _actions([("2024-05-01", "A", 1000), ("2024-07-01", "A", 120)])
+    splits = pd.Series([10.0], index=pd.to_datetime(["2024-06-10"]).tz_localize("America/New_York"))
+    adjusted = adjust_for_splits(actions, splits)
+    assert list(adjusted["currentPriceTarget"]) == pytest.approx([100, 120])
+    assert adjust_for_splits(actions, pd.Series(dtype=float)) is actions
+
+
+def test_expiring_target_is_not_a_cut():
+    # B's high target from a year ago expires inside the window; nobody cut.
+    actions = _actions([
+        ("2025-09-20", "B", 200), ("2026-06-01", "A", 100), ("2026-09-25", "C", 60),
+    ])
+    today = pd.Timestamp("2026-10-14")
+    plain = consensus_targets(actions, pd.date_range(today - pd.Timedelta(days=200), today))
+    assert pt_max_drawdown(plain, 45) < -0.05           # the naive mean "falls"
+    assert anchored_drawdown(actions, today, 45) == pytest.approx(0.0)
+
+
+def test_real_cut_is_seen_by_the_anchored_drawdown():
+    actions = _actions([("2026-06-01", "A", 100), ("2026-06-01", "B", 100), ("2026-10-01", "A", 80)])
+    assert anchored_drawdown(actions, pd.Timestamp("2026-10-14"), 45) == pytest.approx(-0.10)
+    assert anchored_drawdown(actions.iloc[0:0], pd.Timestamp("2026-10-14"), 45) is None
 
 
 def test_channel_position():
