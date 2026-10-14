@@ -102,7 +102,7 @@ def test(actor_id: str, raw_input: str) -> None:
         print(json.dumps(item, ensure_ascii=False)[:3000])
 
 
-def _run_log(run_id: str | None, lines: int = 60) -> str:
+def _run_log(run_id: str | None, lines: int = 200) -> str:
     if not run_id:
         return "(brak id przebiegu)"
     response = requests.get(f"{API}/actor-runs/{run_id}/log",
