@@ -91,6 +91,8 @@ def build_parser() -> argparse.ArgumentParser:
     trela.add_argument("--top", type=int, help="pokaż w konsoli tylko N najlepszych")
     trela.add_argument("--out-dir", default="out", help="katalog na raporty (domyślnie: out)")
     trela.add_argument("--model", help="plik modelu (domyślnie config/trela.yml)")
+    trela.add_argument("--workers", type=int, default=4, help="równoległe pobrania z Yahoo (domyślnie 4)")
+    trela.add_argument("--discord", action="store_true", help="wyślij skrót na Discord (DISCORD_WEBHOOK_URL)")
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
@@ -352,4 +354,5 @@ def _print_block(title: str, values: dict, view: list[tuple[str, str]]) -> None:
 def _cmd_trela(args, config, provider) -> int:
     from .trela.run import cmd_trela
 
-    return cmd_trela(args, config, _universe_for(args, config))
+    # No --universe: Trela's own universe (all US listings), not the config list.
+    return cmd_trela(args, config, _universe_for(args, config) if args.universe else None)

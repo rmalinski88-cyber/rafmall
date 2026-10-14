@@ -83,6 +83,8 @@ class Model:
     min_years_since_ipo: float = 3.0
     green: float = 0.70
     red: float = 0.40
+    # Trela's loose screener in front of the model: rule id -> minimum reading.
+    prefilter: dict = field(default_factory=dict)
 
     @property
     def max_points(self) -> float:
@@ -108,6 +110,7 @@ def load_model(path: str | Path = "config/trela.yml") -> Model:
         min_years_since_ipo=float(data.get("min_years_since_ipo", 3)),
         green=float(thresholds.get("green", 0.70)),
         red=float(thresholds.get("red", 0.40)),
+        prefilter={k: float(v) for k, v in (data.get("prefiltr") or {}).items()},
     )
 
 
@@ -121,6 +124,7 @@ class CompanyScore:
     total: float = 0.0
     max_total: float = 0.0
     pillars: dict = field(default_factory=dict)      # pillar -> (points, max)
+    humanoid: bool = False                           # in the user's humanoid-robotics list
 
     @property
     def pct(self) -> float:

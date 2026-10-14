@@ -196,6 +196,19 @@ profiles:
 
 Wagi są względne — liczy się ich stosunek, nie suma.
 
+## Model Treli (129 pkt)
+
+```bash
+python -m screener trela                 # cały rynek USA >= 10 mld USD, filtr wstępny Treli, ranking
+python -m screener trela --discord       # + skrót na Discord (DISCORD_WEBHOOK_URL)
+python -m screener --universe data/universe_humanoid_global.csv trela   # własna lista, bez filtra
+```
+
+Reguły i progi: `config/trela.yml` (z notatek kursu, gałąź `docs/treli`); kod: `screener/trela/`.
+Spółki z listy humanoidów są oznaczone i nigdy nie odpadają na filtrze wstępnym. Dane: Yahoo (prognozy,
+sprawozdania, historia cen docelowych), lista spółek: skaner TradingView. W Actions: zadanie `trela`,
+samo co miesiąc 7. dnia (luty/maj/sierpień/listopad = rebalans kwartalny).
+
 ## Eksport do Obsidiana
 
 Screener potrafi zapisać wyniki prosto do sejfu Obsidian — jako notatki

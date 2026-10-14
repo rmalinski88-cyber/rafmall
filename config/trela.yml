@@ -142,3 +142,13 @@ min_years_since_ipo: 3
 thresholds:
   green: 0.70
   red: 0.40
+
+# Filtr wstępny (screener) przed modelem, spotkanie 10 (01:07:46-01:10:24, tylko z nagrania).
+# Celowo luźny - rygor jest w modelu. Brak odczytu nie odcina spółki.
+# Spółki humanoidalne z data/universe_humanoid_global.csv nie są odcinane: mają być widoczne zawsze.
+prefiltr:
+  market_cap: 10.0e9
+  revenue_est_2y: 0.05
+  eps_est_2y: 0.05
+  eps_ttm: 0.10
+  altman: 2.0

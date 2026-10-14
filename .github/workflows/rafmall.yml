@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, trela, probe, site, peek, dump]
+        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, probe, site, peek, dump]
       url:
         description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
@@ -30,6 +30,10 @@ on:
     - cron: "17 14-21 * * 1-5"  # alerts
     - cron: "40 21 * * 1-5"     # market
     - cron: "50 21 * * 1-5"     # scan
+    # Model Treli raz w miesiącu: ranking + kontrola cięć cen docelowych (must-have 45 dni).
+    # Trela rebalansuje co kwartał, ok. 3 tygodnie po starcie sezonu wyników: przebiegi z 7 lutego,
+    # maja, sierpnia i listopada to te do rebalansu.
+    - cron: "13 13 7 * *"       # trela
 
 permissions:
   contents: read
@@ -66,6 +70,7 @@ jobs:
             "17 14-21 * * 1-5") t=alerts ;;
             "40 21 * * 1-5")   t=market ;;
             "50 21 * * 1-5")   t=scan ;;
+            "13 13 7 * *")     t=trela ;;
             *)                 t="${INPUT:-check}" ;;
           esac
           echo "zadanie=$t" >> "$GITHUB_OUTPUT"
@@ -97,8 +102,11 @@ jobs:
               # Surowe pola TradingView dla trzech walut (w tym HK raportujące w CNY): kontrola jednostek.
               for t in 2330.TW 005930.KS 9880.HK; do python -m screener show "$t" --raw || true; done
               ;;
-            # Model Treli (129 pkt) na liście spółek - wynik w logu i w artefakcie.
-            trela) python -m screener --universe data/universe_humanoid_global.csv trela ;;
+            # Model Treli (129 pkt): cały rynek USA >= 10 mld USD przez filtr wstępny Treli,
+            # spółki humanoidalne oznaczone. Wynik w logu, artefakcie i na Discordzie (gdy jest sekret).
+            trela) python -m screener trela --discord ;;
+            # Ten sam model na globalnej liście humanoidów (Azja bez historii cen docelowych).
+            trela_lista) python -m screener --universe data/universe_humanoid_global.csv trela ;;
             # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').
             probe) python scripts/probe_yahoo.py ${DUMP_SYMBOLS:-NVDA TSM 6324.T} ;;
             site)

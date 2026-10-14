@@ -1,7 +1,7 @@
 # claude/stock-search-tool-pkr8rw
 
 - **Stan:** w toku
-- **Ostatnia zmiana:** 2026-10-14, chmura
+- **Ostatnia zmiana:** 2026-10-14, chmura (model Treli: rynek USA)
 - **Cel:** narzędzie online na bazie rafmall.ch: wyszukiwarka akcji/ETF/krypto, okazje (wolumen, EMA30, pullback), portfele Trumpa i inwestorów (13F, Kongres, insiderzy); publikacja na GitHub Pages.
 
 ## Zrobione
@@ -19,6 +19,11 @@
   Nazwy pól TradingView zweryfikowane dopiero przez przebieg GitHub Actions (stąd sieć zablokowana).
 - Model Treli (`python -m screener trela`, `config/trela.yml`, `screener/trela/`): 15 reguł / 129 pkt z notatek
   `docs/treli` (gałąź `docs/treli`); dane Yahoo zweryfikowane zadaniem `probe`; przebieg Actions 14.10 OK (73 spółki).
+- Model Treli po przeglądzie (agent za/przeciw, 14.10): uniwersum = cały rynek USA >= 10 mld (TradingView,
+  `screener/trela/universe.py`) + filtr wstępny Treli (`prefiltr` w `config/trela.yml`), humanoidy oznaczone
+  (ADR-y: TSM, SONY, TM, HMC, STM, XPEV); stałe maksimum (`aktywna: false`), must-have 0/1, ceny docelowe
+  korygowane o splity, spadek 45 dni liczony na stałym zbiorze firm; ostrzeżenia „nie kupuj teraz” i brak danych;
+  Discord; cron `13 13 7 * *` (zadanie `trela`), stara lista globalna jako `trela_lista`.
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego

@@ -20,29 +20,87 @@ PILLAR_LABELS = {
 }
 
 
-def run_trela(universe, model: Model, fetch, progress=None) -> tuple[list[CompanyScore], list, dict]:
-    """Fetch readings for every ticker and score them. ``fetch(ticker) -> Readings``."""
-    readings: dict[str, Readings] = {}
+def run_trela(universe, model: Model, fetch, progress=None, workers: int = 1,
+              prefilter: bool = False) -> tuple[list[CompanyScore], list, dict]:
+    """Fetch readings for every ticker and score them. ``fetch(ticker) -> Readings``.
+
+    With ``prefilter`` the model's loose screener runs first; companies it
+    cuts stay in ``readings`` (``Readings.prefiltr`` says why) but are not
+    ranked.  Humanoid-tagged companies are never cut - the user wants to see
+    them even when the model flags them.
+    """
     tickers = [t for t in universe["ticker"] if t]
-    for position, ticker in enumerate(tickers, start=1):
-        if progress:
-            progress(position, len(tickers), ticker)
-        try:
-            readings[ticker] = fetch(ticker)
-        except Exception as exc:  # noqa: BLE001 - one bad ticker must not stop the run
-            readings[ticker] = Readings(ticker=ticker, notes=[f"błąd pobierania: {exc}"])
+    readings = _fetch_all(tickers, fetch, progress, workers)
 
     names = dict(zip(universe["ticker"], universe.get("name", universe["ticker"])))
+    humanoid = dict(zip(universe["ticker"], universe["humanoid"])) if "humanoid" in universe else {}
     for ticker, r in readings.items():
         if names.get(ticker):
             r.name = names[ticker]
+        r.humanoid = bool(humanoid.get(ticker, False))
+        if prefilter and not r.humanoid:
+            r.prefiltr = prefilter_reason(r.values, model.prefilter)
 
+    ranked = {t: r for t, r in readings.items() if not r.prefiltr}
     scores, dropped = score_universe(
-        {t: r.values for t, r in readings.items()},
+        {t: r.values for t, r in ranked.items()},
         model,
-        years_since_ipo={t: r.years_since_ipo for t, r in readings.items()},
+        years_since_ipo={t: r.years_since_ipo for t, r in ranked.items()},
     )
     return scores, dropped, readings
+
+
+def _fetch_all(tickers, fetch, progress, workers: int) -> dict[str, Readings]:
+    def one(ticker):
+        try:
+            return fetch(ticker)
+        except Exception as exc:  # noqa: BLE001 - one bad ticker must not stop the run
+            return Readings(ticker=ticker, notes=[f"błąd pobierania: {exc}"])
+
+    readings: dict[str, Readings] = {}
+    if workers <= 1:
+        for position, ticker in enumerate(tickers, start=1):
+            if progress:
+                progress(position, len(tickers), ticker)
+            readings[ticker] = one(ticker)
+        return readings
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(one, t): t for t in tickers}
+        for position, future in enumerate(as_completed(futures), start=1):
+            ticker = futures[future]
+            readings[ticker] = future.result()
+            if progress:
+                progress(position, len(tickers), ticker)
+    return {t: readings[t] for t in tickers}
+
+
+def prefilter_reason(values: dict, minimums: dict) -> str:
+    """Why Trela's screener would not list the company; ``""`` when it passes.
+
+    A missing reading never cuts: an empty Yahoo table is not evidence
+    against the company, and the model scores a missing reading 0 anyway.
+    """
+    failed = []
+    for rule_id, minimum in minimums.items():
+        value = values.get(rule_id)
+        if value is None or (isinstance(value, float) and value != value):
+            continue
+        if value < minimum:
+            failed.append(f"{_PREFILTER_LABELS.get(rule_id, rule_id)} {_fmt_reading(rule_id, value)}"
+                          f" < {_fmt_reading(rule_id, minimum)}")
+    return "; ".join(failed)
+
+
+_PREFILTER_LABELS = {
+    "market_cap": "kapitalizacja",
+    "revenue_est_2y": "prognoza przychodów",
+    "eps_est_2y": "prognoza EPS",
+    "eps_ttm": "EPS",
+    "altman": "Altman",
+}
 
 
 PT_RULES = ("pt_change_180d", "pt_drawdown_45d", "upside_vs_history")
@@ -70,9 +128,41 @@ def available_pct(s: CompanyScore) -> float:
     return (s.total / available) if available else 0.0
 
 
-def render_console(scores, dropped, readings, model: Model, top: int | None = None) -> str:
+PT_MISSING_WARN = 0.30   # above this share without target history the Value pillar is not trustworthy
+
+
+def run_summary(scores, readings, source: str = "") -> list[str]:
+    """Lines that say what the ranking stands on: source, screener cut, data gaps."""
+    lines = []
+    if source:
+        lines.append(f"Uniwersum: {source}.")
+    cut = [r for r in readings.values() if r.prefiltr]
+    if cut:
+        lines.append(f"Sprawdzono {len(readings)} spółek; filtr wstępny Treli odrzucił {len(cut)}, "
+                     f"w rankingu {len(scores)}.")
+    if scores:
+        no_pt = sum(1 for s in scores if all(s.readings.get(r) is None for r in PT_RULES))
+        if no_pt / len(scores) > PT_MISSING_WARN:
+            lines.append(f"UWAGA: {no_pt} z {len(scores)} spółek bez historii cen docelowych z Yahoo — "
+                         "filar Wycena (41 pkt) jest dla nich pusty, ranking mniej wiarygodny.")
+    return lines
+
+
+def humanoid_positions(scores) -> list[tuple[int, CompanyScore]]:
+    return [(i, s) for i, s in enumerate(scores, start=1) if s.humanoid]
+
+
+def render_console(scores, dropped, readings, model: Model, top: int | None = None, source: str = "") -> str:
+    for s in scores:
+        s.humanoid = readings[s.ticker].humanoid
     full, partial = split_by_pt_data(scores)
-    out = [_render_block(full, dropped, readings, model, top, "PEŁNY MODEL (USA i spółki z historią ceny docelowej)")]
+    summary = run_summary(scores, readings, source)
+    out = ["\n".join(summary)] if summary else []
+    out.append(_render_block(full, dropped, readings, model, top, "PEŁNY MODEL (USA i spółki z historią ceny docelowej)"))
+    tagged = humanoid_positions(full)
+    if tagged:
+        out.append("Spółki humanoidalne w rankingu: " + ", ".join(
+            f"{s.ticker} #{i} ({s.pct * 100:.0f}%{', flaga' if s.flagged else ''})" for i, s in tagged))
     if partial:
         out.append(_render_block(
             partial, [], readings, model, top,
@@ -102,6 +192,10 @@ def _render_block(scores, dropped, readings, model: Model, top, title, use_avail
         r = readings[s.ticker]
         g, f, v, m = (s.pillars.get(p, (0, 0)) for p in ("growth", "fundamentals", "value", "must_have"))
         note = "FLAGA: " + "; ".join(s.flags) if s.flags else (f"brak: {len(s.missing)}" if s.missing else "")
+        if r.upside_now is not None and r.upside_now <= 0:
+            note = ("cena ≥ cel analityków — nie kupuj teraz; " + note).rstrip("; ")
+        if r.humanoid:
+            note = ("[H] " + note).rstrip()
         shown_pct = available_pct(s) if use_available else s.pct
         lines.append(
             f"{i:>3}  {s.ticker:<10}{(r.name or s.ticker)[:27]:<28}{shown_pct * 100:>6.1f}%  "
@@ -118,27 +212,47 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(["pozycja", "ticker", "nazwa", "wynik_pct", "excel_pct", "punkty", "maksimum",
-                         "flagi", "braki", "upside_teraz", *[f"odczyt_{i}" for i in rule_ids],
+                         "flagi", "braki", "upside_teraz", "humanoid", *[f"odczyt_{i}" for i in rule_ids],
                          *[f"pkt_{i}" for i in rule_ids], "uwagi"])
         for i, s in enumerate(scores, start=1):
             r = readings[s.ticker]
             writer.writerow([
                 i, s.ticker, r.name, round(s.pct * 100, 2), round(s.excel_pct * 100, 2),
                 round(s.total, 2), s.max_total, " | ".join(s.flags), " ".join(s.missing),
-                _round(r.upside_now),
+                _round(r.upside_now), int(r.humanoid),
                 *[_round(s.readings.get(rid)) for rid in rule_ids],
                 *[_round(s.points.get(rid)) for rid in rule_ids],
                 " | ".join(r.notes),
             ])
+        for r in readings.values():
+            if r.prefiltr:
+                writer.writerow(["", r.ticker, r.name, "", "", "", "", f"filtr wstępny: {r.prefiltr}", "",
+                                 _round(r.upside_now), int(r.humanoid),
+                                 *[_round(r.values.get(rid)) for rid in rule_ids],
+                                 *["" for _ in rule_ids], " | ".join(r.notes)])
 
 
 def _round(value):
     return "" if value is None else round(float(value), 4)
 
 
-def write_html(scores, dropped, readings, model: Model, path: Path) -> None:
+def write_html(scores, dropped, readings, model: Model, path: Path, source: str = "") -> None:
+    for s in scores:
+        s.humanoid = readings[s.ticker].humanoid
     full, partial = split_by_pt_data(scores)
-    tables = _html_table(full, readings, model, use_available=False)
+    summary = "".join(
+        f"<p class='note{' warn' if line.startswith('UWAGA') else ''}'>{escape(line)}</p>"
+        for line in run_summary(scores, readings, source)
+    )
+    tagged = humanoid_positions(full)
+    tables = summary
+    if tagged:
+        tables += ("<h2>Twoje spółki humanoidalne</h2><p class='note'>Pozycje w pełnym rankingu poniżej. "
+                   "Nie przechodzą przez filtr wstępny, więc widać je nawet z flagą.</p>"
+                   + _html_table([s for _, s in tagged], readings, model, use_available=False,
+                                 positions=[i for i, _ in tagged]))
+        tables += "<h2>Cały ranking</h2>"
+    tables += _html_table(full, readings, model, use_available=False)
     if partial:
         tables += (
             "<h2>Bez historii ceny docelowej</h2><p class='note'>Giełdy azjatyckie i europejskie: Yahoo nie publikuje "
@@ -146,12 +260,18 @@ def write_html(scores, dropped, readings, model: Model, path: Path) -> None:
             "maksimum bez wyceny – porównuj te spółki między sobą, nie z listą wyżej. Trela stosuje model tylko do giełd USA.</p>"
             + _html_table(partial, readings, model, use_available=True)
         )
+    cut = [r for r in readings.values() if r.prefiltr]
+    if cut:
+        items = "".join(f"<li><b>{escape(r.ticker)}</b> {escape(r.name or '')}: "
+                        f"<span class='sub'>{escape(r.prefiltr)}</span></li>" for r in cut)
+        tables += (f"<h2>Odrzucone przez filtr wstępny ({len(cut)})</h2><details><summary>pokaż</summary>"
+                   f"<ul class='note'>{items}</ul></details>")
     _write_page(scores, dropped, model, tables, path)
 
 
-def _html_table(scores, readings, model: Model, use_available: bool) -> str:
+def _html_table(scores, readings, model: Model, use_available: bool, positions=None) -> str:
     rows = []
-    for i, s in enumerate(scores, start=1):
+    for i, s in zip(positions or range(1, len(scores) + 1), scores):
         r = readings[s.ticker]
         shown = available_pct(s) if use_available else s.pct
         state = "flag" if s.flagged else ("green" if shown >= model.green else ("red" if shown < model.red else "mid"))
@@ -166,11 +286,15 @@ def _html_table(scores, readings, model: Model, use_available: bool) -> str:
         )
         notes = "".join(f"<li>{escape(n)}</li>" for n in r.notes)
         flags = f"<div class='flags'>⚑ {escape('; '.join(s.flags))}</div>" if s.flags else ""
+        tag = " <span class='tag'>humanoidy</span>" if r.humanoid else ""
+        above = r.upside_now is not None and r.upside_now <= 0
+        upside = (f"<td class='num bad' title='cena ≥ cel analityków — nie kupuj teraz'>"
+                  f"{fmt.pct(r.upside_now, signed=True)}<div class='sub'>nie kupuj teraz</div></td>"
+                  if above else f"<td class='num'>{fmt.pct(r.upside_now, signed=True)}</td>")
         rows.append(
             f"<tr class='{state}'><td class='num'>{i}</td>"
-            f"<td><b>{escape(r.name or s.ticker)}</b><div class='sub'>{escape(s.ticker)}</div>{flags}</td>"
-            f"<td class='num score'>{shown * 100:.1f}%</td>{cells}"
-            f"<td class='num'>{fmt.pct(r.upside_now, signed=True)}</td>"
+            f"<td><b>{escape(r.name or s.ticker)}</b>{tag}<div class='sub'>{escape(s.ticker)}</div>{flags}</td>"
+            f"<td class='num score'>{shown * 100:.1f}%</td>{cells}{upside}"
             f"<td><details><summary>{len(s.missing)} braków</summary><ul>{detail}</ul>"
             f"{'<ul class=sub>' + notes + '</ul>' if notes else ''}</details></td></tr>"
         )
@@ -188,7 +312,7 @@ def _write_page(scores, dropped, model: Model, tables: str, path: Path) -> None:
         + ", ".join(f"{escape(r.nazwa)} ({r.max:g} pkt)" for r in dropped) + "</p>"
         if dropped else ""
     )
-    max_total = scores[0].max_total if scores else model.max_points
+    max_total = max((s.max_total for s in scores), default=model.max_points)
     html = f"""<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>Model Treli</title>
 <style>
@@ -206,6 +330,8 @@ th{{color:var(--sub);font-size:.74rem;text-transform:uppercase;letter-spacing:.0
 .sub{{color:var(--muted);font-size:.78rem}} .score{{font-weight:700}}
 tr.green .score{{color:var(--good)}} tr.red .score{{color:var(--bad)}} tr.flag{{opacity:.6}}
 .flags{{color:var(--bad);font-size:.78rem}} details ul{{margin:6px 0;padding-left:18px}}
+.bad{{color:var(--bad)}} .warn{{color:var(--bad);font-weight:600}}
+.tag{{font-size:.7rem;padding:1px 6px;border-radius:8px;border:1px solid var(--line);color:var(--sub);margin-left:6px}}
 </style></head><body><div class="wrap">
 <h1>{escape(model.name)}</h1>
 <p class="note">{date.today().isoformat()} · {len(scores)} spółek · maksimum {max_total:g} pkt ·
@@ -241,25 +367,66 @@ def _fmt_reading(rule_id: str, value) -> str:
 
 
 def cmd_trela(args, config, universe) -> int:
-    """Entry point wired into ``screener.cli``."""
+    """Entry point wired into ``screener.cli``.
+
+    Without an explicit universe file the run covers Trela's own universe:
+    all US listings above 10 bn USD, through his loose screener.
+    """
     from ..cache import Cache
     from ..providers.yahoo import YahooProvider
+    from .universe import us_universe
 
     model = load_model(getattr(args, "model", None) or "config/trela.yml")
     fx_source = YahooProvider(cache=Cache(config.get("cache_dir", ".cache"), config.get("cache_ttl_hours", 12)))
 
+    if universe is None:
+        universe, source = us_universe(model.prefilter.get("market_cap", 10e9))
+        prefilter = True
+    else:
+        source, prefilter = f"plik ({len(universe)} spółek), bez filtra wstępnego", False
+    print(f"Model Treli: {len(universe)} spółek — {source}", file=sys.stderr)
+
     def progress(position, total, ticker):
-        print(f"  [{position}/{total}] {ticker}", file=sys.stderr, flush=True)
+        if position % 25 == 0 or position == total:
+            print(f"  [{position}/{total}] {ticker}", file=sys.stderr, flush=True)
 
     scores, dropped, readings = run_trela(
-        universe, model, lambda t: fetch_readings(t, fx_source.get_fx_to_usd), progress=progress
+        universe, model, lambda t: fetch_readings(t, fx_source.get_fx_to_usd), progress=progress,
+        workers=getattr(args, "workers", 4) or 1, prefilter=prefilter,
     )
-    print(render_console(scores, dropped, readings, model, top=getattr(args, "top", None)))
+    print(render_console(scores, dropped, readings, model, top=getattr(args, "top", None), source=source))
 
     out_dir = Path(getattr(args, "out_dir", "out"))
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = date.today().isoformat()
     write_csv(scores, readings, model, out_dir / f"trela_{stamp}.csv")
-    write_html(scores, dropped, readings, model, out_dir / f"trela_{stamp}.html")
+    write_html(scores, dropped, readings, model, out_dir / f"trela_{stamp}.html", source=source)
     print(f"\nCSV:  {out_dir / f'trela_{stamp}.csv'}\nHTML: {out_dir / f'trela_{stamp}.html'}", file=sys.stderr)
+
+    if getattr(args, "discord", False):
+        from tracker.notify import send_discord
+
+        sent = send_discord(discord_summary(scores, readings, model, source))
+        print("Discord: wysłano" if sent else "Discord: brak DISCORD_WEBHOOK_URL — nie wysłano", file=sys.stderr)
     return 0
+
+
+def discord_summary(scores, readings, model: Model, source: str = "", top: int = 15) -> str:
+    """Short ranking for a Discord channel: top of the list and the humanoid names."""
+    for s in scores:
+        s.humanoid = readings[s.ticker].humanoid
+    full, _ = split_by_pt_data(scores)
+    lines = [f"**{model.name}** — {date.today().isoformat()}"]
+    lines += run_summary(scores, readings, source)
+    lines.append("")
+    for i, s in enumerate([s for s in full if not s.flagged][:top], start=1):
+        r = readings[s.ticker]
+        upside = "" if r.upside_now is None else f", upside {r.upside_now * 100:+.0f}%"
+        warn = " ⚠ cena ≥ cel" if r.upside_now is not None and r.upside_now <= 0 else ""
+        lines.append(f"{i}. **{s.ticker}** {r.name} — {s.pct * 100:.1f}%{upside}{warn}")
+    tagged = humanoid_positions(full)
+    if tagged:
+        lines += ["", "Humanoidy: " + ", ".join(
+            f"{s.ticker} #{i} {s.pct * 100:.0f}%{' (flaga)' if s.flagged else ''}" for i, s in tagged)]
+    lines += ["", "Podpowiedź do ręcznego przeglądu, nie rekomendacja."]
+    return "\n".join(lines)

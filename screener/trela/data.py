@@ -39,6 +39,8 @@ class Readings:
     years_since_ipo: float | None = None
     upside_now: float | None = None
     price_target: float | None = None
+    humanoid: bool = False
+    prefiltr: str = ""                              # why Trela's screener cut it; "" = passed
 
 
 # -- pure computations ----------------------------------------------------------
