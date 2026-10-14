@@ -49,7 +49,16 @@ class Setup:
         return f"{self.rule}|{self.ticker}|{self.impulse_day or self.day}"
 
 
-def illiquid_reason(prices: pd.DataFrame, cfg: dict, crypto: bool = False) -> str | None:
+def dollar_volume(ticker: str, prices: pd.DataFrame, window: int = 20) -> float:
+    """Average daily turnover in USD.  Yahoo reports crypto volume already in the
+    quote currency (BTC-USD ~ 2e10 = USD), stock volume in shares."""
+    vol = prices["volume"].astype(float).tail(window)
+    if ticker.upper().endswith("-USD"):
+        return float(vol.mean())
+    return float((prices["close"].astype(float).tail(window) * vol).mean())
+
+
+def illiquid_reason(prices: pd.DataFrame, cfg: dict, crypto: bool = False, ticker: str = "") -> str | None:
     """Why a symbol is skipped before the rules run, or None when it qualifies.
 
     The price floor is for penny stocks only: a coin's unit price says nothing
@@ -60,14 +69,14 @@ def illiquid_reason(prices: pd.DataFrame, cfg: dict, crypto: bool = False) -> st
     close = prices["close"].astype(float)
     if not crypto and float(close.iloc[-1]) < cfg["min_price"]:
         return f"kurs < {cfg['min_price']:g} USD"
-    dollar = (close * prices["volume"].astype(float)).tail(20).mean()
+    dollar = dollar_volume(ticker or ("X-USD" if crypto else "X"), prices)
     if not (np.isfinite(dollar) and dollar >= cfg["min_avg_dollar_volume"]):
         return f"obrót < {cfg['min_avg_dollar_volume'] / 1e6:g} mln USD/dzień"
     return None
 
 
-def liquid_enough(prices: pd.DataFrame, cfg: dict, crypto: bool = False) -> bool:
-    return illiquid_reason(prices, cfg, crypto) is None
+def liquid_enough(prices: pd.DataFrame, cfg: dict, crypto: bool = False, ticker: str = "") -> bool:
+    return illiquid_reason(prices, cfg, crypto, ticker) is None
 
 
 def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) -> Setup | None:
@@ -120,7 +129,7 @@ def ema_break_and_hold(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         strength=peak_ratio * (1.0 + max(dist, 0.0) * 5),
         day=pd.Timestamp(close.index[-1]).date(),
         last_close=last,
-        avg_dollar_volume=float((close * volume).tail(20).mean()),
+        avg_dollar_volume=dollar_volume(ticker, prices),
         impulse_day=break_day,
     )
 
@@ -209,7 +218,7 @@ def ema_pullback_entry(ticker: str, name: str, prices: pd.DataFrame, cfg: dict) 
         strength=impulse_ratio * (1.0 + (n - 1 - impulse) / max_age),
         day=pd.Timestamp(close.index[-1]).date(),
         last_close=last,
-        avg_dollar_volume=float((close * volume).tail(20).mean()),
+        avg_dollar_volume=dollar_volume(ticker, prices),
         impulse_day=impulse_day,
     )
 

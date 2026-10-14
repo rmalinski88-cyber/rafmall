@@ -515,7 +515,7 @@ def _cmd_market(ctx: Context) -> int:
             continue
         if prices is None or prices.empty:
             continue
-        reason = illiquid_reason(prices, rules, crypto=ticker.upper().endswith("-USD"))
+        reason = illiquid_reason(prices, rules, crypto=ticker.upper().endswith("-USD"), ticker=ticker)
         if reason:
             scan.skipped_illiquid += 1
             skipped.setdefault(reason, []).append(ticker)

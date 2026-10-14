@@ -55,3 +55,15 @@ def test_samples_replay_command_dedupes_by_impulse(capsys):
     out = capsys.readouterr().out
     assert "2026-08-26" in out and out.count("impuls 2026-07-09") == 1
     assert "alert idzie raz" in out
+
+
+@pytest.mark.skipif(not ARB.exists(), reason="sample bars missing")
+def test_crypto_turnover_is_volume_not_price_times_volume():
+    """Yahoo gives crypto volume in USD: ARB at 0.09 USD traded > 20 mln USD/day in Aug 2026."""
+    from tracker.market import dollar_volume, liquid_enough, DEFAULTS
+
+    frame = pd.read_csv(ARB, index_col=0)
+    frame.index = pd.to_datetime(frame.index)
+    upto = frame.loc[:"2026-08-26"]
+    assert dollar_volume("ARB11841-USD", upto) > 20e6
+    assert liquid_enough(upto, {**DEFAULTS, "min_avg_dollar_volume": 20e6}, crypto=True, ticker="ARB11841-USD")
