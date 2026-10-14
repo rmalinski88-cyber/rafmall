@@ -292,3 +292,35 @@ def test_screen_runs_end_to_end_on_tradingview(universe, config):
     # Relative strength comes from the index's own performance figures.
     assert result.ranked["rs_6m"].notna().any()
     assert result.ranked["bars"].isna().all()
+
+
+# -- hybrid -----------------------------------------------------------------
+
+
+def test_hybrid_takes_history_from_one_source_and_fundamentals_from_the_other(universe, config):
+    from screener.providers.fixture import FixtureProvider
+    from screener.providers.hybrid import HybridProvider
+
+    tv = TradingViewProvider(transport=make_transport())
+    provider = HybridProvider(prices=FixtureProvider(), fundamentals=tv)
+    result = run_screen(universe, provider, config, profile_name="growth")
+
+    assert not result.ranked.empty
+    assert result.prices, "history source must feed the price charts"
+    first = result.ranked.iloc[0]
+    assert first["bars"] > 0
+    expected_cap = value_for(to_tradingview(first["ticker"]), "market_cap_basic")
+    assert first["market_cap_usd"] == pytest.approx(expected_cap)
+
+
+def test_hybrid_falls_back_to_tradingview_indicators_without_history(universe, config):
+    from screener.providers.hybrid import HybridProvider
+
+    class NoHistory(TradingViewProvider):
+        pass
+
+    provider = HybridProvider(prices=NoHistory(transport=make_transport()),
+                              fundamentals=TradingViewProvider(transport=make_transport()))
+    result = run_screen(universe.head(8), provider, config, profile_name="growth")
+    assert result.prices == {}
+    assert result.ranked["technical_score"].notna().all()

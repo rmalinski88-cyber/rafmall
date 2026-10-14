@@ -6,7 +6,9 @@
 # Źródło danych: tradingview (domyślne, publiczny endpoint skanera, bez logowania,
 # fundamenty + wskaźniki techniczne w jednym zapytaniu) | yahoo (historia kursów,
 # wskaźniki liczone lokalnie, są wykresy kursów) | fixture (dane syntetyczne, offline)
-provider: tradingview
+# hybrid (domyślne): wykresy i wskaźniki z historii Yahoo, fundamenty z TradingView;
+# gdy Yahoo nie ma historii spółki, wskaźniki biorą się z TradingView.
+provider: hybrid
 universe: data/universe_humanoid_asia.csv
 
 # ~420 dni sesyjnych z zapasem, żeby SMA200 i zwroty 12M miały pełne okno.
