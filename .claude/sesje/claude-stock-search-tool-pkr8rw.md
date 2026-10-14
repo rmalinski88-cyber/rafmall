@@ -24,6 +24,10 @@
   (ADR-y: TSM, SONY, TM, HMC, STM, XPEV); stałe maksimum (`aktywna: false`), must-have 0/1, ceny docelowe
   korygowane o splity, spadek 45 dni liczony na stałym zbiorze firm; ostrzeżenia „nie kupuj teraz” i brak danych;
   Discord; cron `13 13 7 * *` (zadanie `trela`), stara lista globalna jako `trela_lista`.
+- Przebieg Actions 14.10 (run 38583174329): 913 spółek z TradingView, filtr wstępny odciął 485, w rankingu 428,
+  0 błędów pobierania (2 wątki + ponowienia; przy 4 wątkach Yahoo blokowało po ~375). Strona:
+  https://claude.ai/artifact/YGXgrcgCH3L8Ca1psUCKjs. Sesja w chmurze nie pobiera artefaktów: CSV idzie do logu,
+  raport odtwarza `python -m screener trela --z-csv PLIK`.
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego

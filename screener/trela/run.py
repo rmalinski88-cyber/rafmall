@@ -302,7 +302,7 @@ def _float(text):
 
 
 def _round(value):
-    return "" if value is None else round(float(value), 4)
+    return "" if value is None else round(float(value), 6)
 
 
 def write_html(scores, dropped, readings, model: Model, path: Path, source: str = "") -> None:
@@ -392,7 +392,8 @@ def _write_page(scores, dropped, model: Model, tables: str, path: Path) -> None:
 <style>
 :root{{--bg:#f9f9f7;--card:#fcfcfb;--fg:#0b0b0b;--sub:#52514e;--muted:#898781;--line:#e1e0d9;
 --good:#0ca30c;--bad:#d03b3b;--warn:#fab219}}
-@media (prefers-color-scheme:dark){{:root{{--bg:#0d0d0d;--card:#1a1a19;--fg:#fff;--sub:#c3c2b7;--line:#2c2c2a}}}}
+@media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{--bg:#0d0d0d;--card:#1a1a19;--fg:#fff;--sub:#c3c2b7;--line:#2c2c2a}}}}
+:root[data-theme="dark"]{{--bg:#0d0d0d;--card:#1a1a19;--fg:#fff;--sub:#c3c2b7;--line:#2c2c2a}}
 body{{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}}
 .wrap{{max-width:1200px;margin:0 auto;padding:28px 16px 64px}}
 h1{{font-size:1.5rem;margin:0 0 4px}} h2{{font-size:1.1rem;margin:32px 0 4px}} .note{{color:var(--sub);font-size:.88rem}}
