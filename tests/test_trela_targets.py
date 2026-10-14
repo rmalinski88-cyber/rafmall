@@ -110,3 +110,13 @@ def test_rerun_on_the_same_day_drops_a_rejected_snapshot(tmp_path):
     TradingViewTargets(history, provider=TradingViewProvider(transport=_transport(rows)),
                        today="2026-10-14").prefetch(["6324.T"])
     assert history.series("6324.T").empty
+
+
+def test_disagreeing_sources_are_named(tmp_path):
+    rows = {"TSE:6324": {"close": 4000.0, "currency": "JPY", "price_target_average": 6000.0}}
+    targets = TradingViewTargets(TargetHistory(tmp_path / "h.csv"), provider=TradingViewProvider(transport=_transport(rows)))
+    targets.prefetch(["6324.T"])
+    r = Readings("6324.T", values={"altman": 3.0}, price_target=4400.0)
+    targets.fill(r)
+    assert r.upside_now == pytest.approx(0.5)
+    assert any("Yahoo 4 400.00" in n and "TradingView 6 000.00" in n for n in r.notes)

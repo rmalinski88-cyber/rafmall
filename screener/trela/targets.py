@@ -31,6 +31,7 @@ EXTRA_COLUMNS = ["close", "currency", "fundamental_currency_code", "price_target
 # TSMC 104 against a 2 490 TWD price); a converted upside outside this band is still a unit
 # mismatch, not an opinion, and is dropped.
 PLAUSIBLE_UPSIDE = (-0.8, 3.0)
+SOURCES_DISAGREE = 0.25   # Yahoo's mean target vs TradingView's: more apart than this is named in the report
 US_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
 PT_RULES = ("pt_change_180d", "pt_drawdown_45d", "upside_vs_history")
 
@@ -154,6 +155,10 @@ class TradingViewTargets:
             return r
 
         if snap and snap.get("close"):
+            yahoo = r.price_target
+            if yahoo and abs(snap["target"] / yahoo - 1.0) > SOURCES_DISAGREE:
+                r.notes.append(f"cele się różnią: Yahoo {yahoo:,.2f}, TradingView {snap['target']:,.2f} "
+                               "— sprawdź przed decyzją".replace(",", " "))
             r.price_target = snap["target"]
             r.upside_now = snap["target"] / snap["close"] - 1.0
         r.values["pt_change_180d"] = pt_change(series, 180)
