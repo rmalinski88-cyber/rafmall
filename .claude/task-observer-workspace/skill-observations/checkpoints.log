@@ -10,3 +10,5 @@
 2026-10-12 19:38 [rafmall] session-start scan: files=6 parsed=6 principles=0
 2026-10-12T19:50Z checkpoint: 0006 extended (log interleaving); no new observations
 2026-10-12 18:48 [rafmall] session-start scan: files=5 parsed=5 principles=0
+2026-10-14 18:36 loaded task-observer — 1 open observations
+2026-10-14 18:36 [rafmall] session-start scan: files=6 parsed=6 principles=0
