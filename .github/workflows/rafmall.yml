@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, site, peek, dump]
+        options: [check, first_run, alerts, market, scan, screener, trela, probe, site, peek, dump]
       url:
         description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
@@ -97,6 +97,10 @@ jobs:
               # Surowe pola TradingView dla trzech walut (w tym HK raportujące w CNY): kontrola jednostek.
               for t in 2330.TW 005930.KS 9880.HK; do python -m screener show "$t" --raw || true; done
               ;;
+            # Model Treli (129 pkt) na liście spółek - wynik w logu i w artefakcie.
+            trela) python -m screener --universe data/universe_humanoid_global.csv trela ;;
+            # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').
+            probe) python scripts/probe_yahoo.py ${DUMP_SYMBOLS:-NVDA TSM 6324.T} ;;
             site)
               python -m screener --provider yahoo --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
               if [ -n "$FTP_HOST" ]; then python scripts/publish.py; else echo "Brak sekretów FTP - strona tylko jako plik do pobrania."; fi
