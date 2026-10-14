@@ -87,6 +87,11 @@ def build_parser() -> argparse.ArgumentParser:
                       help="dodatkowa lista z osobnym rankingiem, np. 'Surowce=data/universe_surowce.csv' (można podać kilka razy)")
     site.add_argument("--etfs", metavar="PLIK.csv", help="lista ETF-ów (ticker,name,group,notes); domyślnie data/etf.csv jeśli istnieje")
 
+    trela = sub.add_parser("trela", help="ranking wg modelu punktowego Tomasza Treli (129 pkt)")
+    trela.add_argument("--top", type=int, help="pokaż w konsoli tylko N najlepszych")
+    trela.add_argument("--out-dir", default="out", help="katalog na raporty (domyślnie: out)")
+    trela.add_argument("--model", help="plik modelu (domyślnie config/trela.yml)")
+
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
     show.add_argument(
@@ -120,7 +125,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Błąd dostawcy danych: {exc}", file=sys.stderr)
         return 2
 
-    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show, "site": _cmd_site}
+    handlers = {"run": _cmd_run, "validate": _cmd_validate, "show": _cmd_show, "site": _cmd_site,
+                "trela": _cmd_trela}
     try:
         return handlers[args.command](args, config, provider)
     except (FileNotFoundError, ValueError, KeyError) as exc:
@@ -341,3 +347,9 @@ def _print_block(title: str, values: dict, view: list[tuple[str, str]]) -> None:
     print("-" * 46)
     for key, kind in view:
         print(f"  {label(key):<28}{format_metric(key, kind, values.get(key)):>16}")
+
+
+def _cmd_trela(args, config, provider) -> int:
+    from .trela.run import cmd_trela
+
+    return cmd_trela(args, config, _universe_for(args, config))

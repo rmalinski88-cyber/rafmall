@@ -1,0 +1,139 @@
+# Model punktowy Tomasza Treli (Uniwersytet Inwestycyjny 2026, semestr akcyjny).
+# Źródło: docs/treli/Kurs Treli - reguly wyceny pod skaner.md oraz Trela 10 - Finalny model.md.
+# Model finalny: 15 reguł, 129 pkt = Growth 55 + Fundamentals 30 + Value 41 + Must-Have 3.
+#
+# Punktacja liniowa: odczyt <= worst -> 0 pkt, >= best -> max, pomiędzy proporcjonalnie.
+# Wartości procentowe zapisane jako ułamki (0.10 = 10%).
+# "pewnosc" przepisana z notatek: slajd = potwierdzone slajdem, nagranie = tylko z mowy.
+
+name: "Model Treli 2026 (129 pkt)"
+
+rules:
+  # --- Growth (55) -------------------------------------------------------------
+  - id: revenue_5y
+    filar: growth
+    nazwa: "Przychody (TTM), zmiana w 5 lat"
+    max: 5
+    worst: 0.50
+    best: 1.00
+    pewnosc: slajd
+  - id: revenue_est_2y
+    filar: growth
+    nazwa: "Prognozowany średnioroczny wzrost przychodów, 2 lata"
+    max: 10
+    worst: 0.10
+    best: 0.30
+    pewnosc: slajd
+  - id: eps_5y
+    filar: growth
+    nazwa: "EPS (TTM), zmiana w 5 lat"
+    max: 5
+    worst: 1.00
+    best: 2.50
+    pewnosc: nagranie
+  - id: eps_est_2y
+    filar: growth
+    nazwa: "Prognozowany średnioroczny wzrost EPS, 2 lata"
+    max: 5
+    worst: 0.15
+    best: 0.40
+    pewnosc: slajd
+  - id: eps_est_5y
+    filar: growth
+    nazwa: "Prognoza wzrostu EPS, 5 lat (LTG)"
+    max: 5
+    worst: 0.15
+    best: 0.30
+    pewnosc: slajd
+  - id: cfo_5y
+    filar: growth
+    nazwa: "Gotówka operacyjna (CFO), zmiana w 5 lat"
+    max: 10
+    worst: 1.00
+    best: 2.50
+    pewnosc: nagranie
+  - id: cfo_est_2y
+    filar: growth
+    nazwa: "Prognoza wzrostu CFO, 2 lata"
+    max: 5
+    worst: 0.15
+    best: 0.30
+    pewnosc: nagranie
+  - id: ebitda_margin
+    filar: growth
+    nazwa: "Marża EBITDA (TTM)"
+    max: 10
+    worst: 0.20
+    best: 0.40
+    pewnosc: slajd
+
+  # --- Fundamentals (30) -------------------------------------------------------
+  - id: altman
+    filar: fundamentals
+    nazwa: "Altman Z''-Score (spółki nieprodukcyjne)"
+    max: 30
+    worst: 1.0
+    best: 4.0
+    pewnosc: slajd
+
+  # --- Value (41) --------------------------------------------------------------
+  - id: pt_drawdown_45d
+    filar: value
+    nazwa: "Cena docelowa: maks. spadek w 45 dniach"
+    max: 1
+    worst: -0.05
+    best: -0.049
+    must_have: true
+    pewnosc: slajd
+  - id: pt_change_180d
+    filar: value
+    nazwa: "Cena docelowa: zmiana w 180 dniach"
+    max: 10
+    worst: 0.10
+    best: 0.20
+    pewnosc: slajd
+  - id: upside_vs_history
+    filar: value
+    nazwa: "Upside na tle własnej historii (4 lata)"
+    max: 30
+    # Odczyt to pozycja bieżącego upside w kanale 15.-85. percentyla historii (0 = dół, 1 = góra).
+    worst: 0.0
+    best: 1.0
+    pewnosc: "waga: slajd; kanał: nagranie"
+
+  # --- Must-Have (3) -----------------------------------------------------------
+  - id: market_cap
+    filar: must_have
+    nazwa: "Kapitalizacja (USD)"
+    max: 1
+    worst: 10.0e9
+    best: 10.1e9
+    must_have: true
+    pewnosc: slajd
+  - id: eps_analysts
+    filar: must_have
+    nazwa: "Liczba analityków z prognozą EPS"
+    max: 1
+    worst: 3.0
+    best: 3.1
+    must_have: true
+    # Trela: "poniżej trzech = zero"; dokładnie 3 analityków przechodzi.
+    inclusive_worst: true
+    pewnosc: slajd
+  - id: eps_ttm
+    filar: must_have
+    nazwa: "EPS (TTM) >= 0,50 USD"
+    max: 1
+    worst: 0.50
+    best: 0.51
+    must_have: true
+    inclusive_worst: true
+    pewnosc: slajd
+
+# Wymóg modelu poza regułami punktowymi.
+min_years_since_ipo: 3
+
+# Wynik łączny jak w Scrab: suma punktów / maksimum. Zielony >= 70%, czerwony < 40%.
+thresholds:
+  green: 0.70
+  red: 0.40
