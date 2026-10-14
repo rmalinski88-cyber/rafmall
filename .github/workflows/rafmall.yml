@@ -55,7 +55,8 @@ jobs:
       SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      # Sekret w repo nazywa się APIFY1 (tak go dodano 14.10); APIFY_TOKEN też zadziała.
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN || secrets.APIFY1 }}
       FTP_HOST: ${{ secrets.FTP_HOST }}
       FTP_USER: ${{ secrets.FTP_USER }}
       FTP_PASS: ${{ secrets.FTP_PASS }}
