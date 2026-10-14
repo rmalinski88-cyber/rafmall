@@ -91,8 +91,9 @@ def build_parser() -> argparse.ArgumentParser:
     trela.add_argument("--top", type=int, help="pokaż w konsoli tylko N najlepszych")
     trela.add_argument("--out-dir", default="out", help="katalog na raporty (domyślnie: out)")
     trela.add_argument("--model", help="plik modelu (domyślnie config/trela.yml)")
-    trela.add_argument("--workers", type=int, default=4, help="równoległe pobrania z Yahoo (domyślnie 4)")
+    trela.add_argument("--workers", type=int, default=2, help="równoległe pobrania z Yahoo (domyślnie 2)")
     trela.add_argument("--discord", action="store_true", help="wyślij skrót na Discord (DISCORD_WEBHOOK_URL)")
+    trela.add_argument("--z-csv", help="odtwórz raport z CSV poprzedniego przebiegu, bez pobierania danych")
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")

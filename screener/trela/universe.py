@@ -14,6 +14,7 @@ names count through their US ADRs.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -21,6 +22,10 @@ import pandas as pd
 from tracker.sources.tradingview import SCANNER_URL, to_yahoo
 
 US_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
+# Listed debt and preferreds the screener reports as stock: "Southern Co 4.2 % Notes 2026",
+# "Alphabet Inc. Depository Shares", "Xcel Energy Inc. 6.25 % Notes".
+NOT_A_SHARE = re.compile(r"\bnotes?\b|\bdebentures?\b|\bdeposit[oa]ry shares?\b|\bpreferred\b|\bpfd\b|\d\s?%",
+                         re.IGNORECASE)
 HUMANOID_LIST = "data/universe_humanoid_global.csv"
 
 # Home listing -> US ADR on NYSE/NASDAQ.  Only exchange-listed ADRs: OTC
@@ -42,6 +47,8 @@ def build_query(min_market_cap_usd: float, limit: int = 2000) -> dict:
             {"left": "type", "operation": "in_range", "right": ["stock", "dr"]},
             {"left": "market_cap_basic", "operation": "egreater", "right": min_market_cap_usd},
             {"left": "exchange", "operation": "in_range", "right": list(US_EXCHANGES)},
+            # Preferred shares come through as type "stock" (first live run: STRK, STRF, STRD).
+            {"left": "typespecs", "operation": "has_none_of", "right": ["preferred"]},
         ],
         "columns": ["name", "description", "market_cap_basic", "exchange", "Value.Traded"],
         "sort": {"sortBy": "market_cap_basic", "sortOrder": "desc"},
@@ -59,7 +66,7 @@ def parse_rows(payload: dict, min_market_cap_usd: float = 0.0) -> pd.DataFrame:
             continue
         exchange, ticker = symbol.split(":", 1)
         # `markets`/exchange filters have leaked OTC rows before; check again here.
-        if exchange not in US_EXCHANGES or "/" in ticker:
+        if exchange not in US_EXCHANGES or "/" in ticker or NOT_A_SHARE.search(d[1] or ""):
             continue
         cap = d[2]
         if cap is None or cap < min_market_cap_usd:
@@ -73,23 +80,41 @@ def parse_rows(payload: dict, min_market_cap_usd: float = 0.0) -> pd.DataFrame:
         })
     if not rows:
         return pd.DataFrame(columns=["ticker", "name", "exchange", "market_cap_usd"])
-    frame = pd.DataFrame(rows)
-    # GOOGL/GOOG, BRK.A/BRK.B: same company, same market cap - Trela removes
-    # these duplicates by hand; keep the line people actually trade.
-    frame["key"] = frame["name"].str.lower().str.strip()
-    frame = frame.sort_values("traded", ascending=False).drop_duplicates("key")
-    frame = frame.sort_values("market_cap_usd", ascending=False)
-    return frame.drop(columns=["key", "traded"]).reset_index(drop=True)
+    # GOOGL/GOOG, LEN/LEN-B, PRU and its listed notes: one company, one market
+    # cap - Trela removes these duplicates by hand.  Same first word of the
+    # name and a cap within 3% is one company; keep the most traded line.
+    kept: list[dict] = []
+    for row in sorted(rows, key=lambda r: -r["traded"]):
+        word = _first_word(row["name"])
+        if any(_first_word(k["name"]) == word
+               and abs(k["market_cap_usd"] / row["market_cap_usd"] - 1.0) < 0.03 for k in kept):
+            continue
+        kept.append(row)
+    frame = pd.DataFrame(kept).sort_values("market_cap_usd", ascending=False)
+    return frame.drop(columns=["traded"]).reset_index(drop=True)
+
+
+def _first_word(name: str) -> str:
+    words = re.findall(r"[a-z0-9&]+", name.lower())
+    return words[0] if words else name.lower()
 
 
 def fetch_us_universe(min_market_cap_usd: float = 10e9, timeout: int = 30) -> pd.DataFrame:
     """US listings above the cap from TradingView; raises on transport error."""
     import requests
 
-    response = requests.post(
-        SCANNER_URL.format(market="america"), json=build_query(min_market_cap_usd), timeout=timeout,
-        headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
-    )
+    query = build_query(min_market_cap_usd)
+    for attempt in range(2):
+        response = requests.post(
+            SCANNER_URL.format(market="america"), json=query, timeout=timeout,
+            headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+        )
+        if response.status_code == 400 and attempt == 0:
+            # An unofficial endpoint may stop accepting a filter; the name check in
+            # parse_rows still drops preferreds and notes.
+            query["filter"] = [f for f in query["filter"] if f["left"] != "typespecs"]
+            continue
+        break
     response.raise_for_status()
     return parse_rows(response.json(), min_market_cap_usd)
 

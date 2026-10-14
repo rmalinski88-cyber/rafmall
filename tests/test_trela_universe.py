@@ -22,9 +22,14 @@ def test_rows_keep_us_exchanges_and_one_line_per_company():
         ("OTC:FANUY", ["FANUY", "Fanuc ADR", 3.0e10, "OTC", 1e7]),
         ("NYSE:SMALL", ["SMALL", "Small Co", 5.0e9, "NYSE", 1e7]),
         ("NYSE:PFD/PA", ["PFD/PA", "Preferred", 2.0e10, "NYSE", 1e7]),
+        ("NASDAQ:GOOGM", ["GOOGM", "Alphabet Inc. Depository Shares", 2.0e12, "NASDAQ", 1e6]),
+        ("NYSE:SOJD", ["SOJD", "Southern Company 4.95 % Notes 2080", 9.0e10, "NYSE", 1e6]),
+        ("NYSE:PRU", ["PRU", "Prudential Financial, Inc.", 4.0e10, "NYSE", 5e8]),
+        ("NYSE:PFH", ["PFH", "Prudential Financial, Inc.", 4.0e10, "NYSE", 1e6]),
+        ("NYSE:PUK", ["PUK", "Prudential plc Sponsored ADR", 3.0e10, "NYSE", 1e7]),
     ])
     frame = parse_rows(payload, 10e9)
-    assert list(frame["ticker"]) == ["GOOGL", "BRK-B"]
+    assert list(frame["ticker"]) == ["GOOGL", "BRK-B", "PRU", "PUK"]
 
 
 def test_query_asks_for_us_stocks_and_adrs_above_the_cap():
@@ -106,3 +111,35 @@ def test_data_guard_warns_when_target_history_is_missing():
     universe = pd.DataFrame({"ticker": ["X", "Y"], "name": ["X", "Y"]})
     scores, dropped, readings = run_trela(universe, model, fetch)
     assert "UWAGA" in render_console(scores, dropped, readings, model)
+
+
+def test_report_csv_rebuilds_the_same_ranking(tmp_path):
+    from screener.trela.run import read_csv_readings
+
+    model = load_model("config/trela.yml")
+
+    def fetch(t):
+        r = _fake({"WEAK": "BBB"}.get(t, "AAA"))
+        r.ticker = t
+        return r
+
+    universe = pd.DataFrame({"ticker": ["AAA", "WEAK", "ROBO"], "name": ["A", "Weak", "Robot"],
+                             "humanoid": [False, False, True]})
+    scores, _, readings = run_trela(universe, model, fetch, prefilter=True)
+    write_csv(scores, readings, model, tmp_path / "t.csv")
+
+    universe2, stored = read_csv_readings(tmp_path / "t.csv", model)
+    again, _, readings2 = run_trela(universe2, model, stored.__getitem__)
+    assert [(s.ticker, round(s.pct, 3)) for s in again] == [(s.ticker, round(s.pct, 3)) for s in scores]
+    assert readings2["WEAK"].prefiltr and readings2["ROBO"].humanoid
+    assert readings2["AAA"].years_since_ipo == 10
+
+
+def test_empty_fetch_is_retried_after_a_pause():
+    from screener.trela.data import Readings
+    from screener.trela.run import fetch_with_retry
+
+    answers = iter([Readings("X"), Readings("X", values={"altman": 3.0})])
+    pauses = []
+    result = fetch_with_retry(lambda: next(answers), sleep=pauses.append)
+    assert result.values == {"altman": 3.0} and pauses == [20]

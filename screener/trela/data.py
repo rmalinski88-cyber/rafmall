@@ -42,6 +42,11 @@ class Readings:
     humanoid: bool = False
     prefiltr: str = ""                              # why Trela's screener cut it; "" = passed
 
+    @property
+    def empty(self) -> bool:
+        """Nothing came back: a failed or throttled fetch, not a weak company."""
+        return not any(value is not None for value in self.values.values())
+
 
 # -- pure computations ----------------------------------------------------------
 
@@ -216,8 +221,13 @@ def channel_position(current: float | None, history: pd.Series,
 # -- fetching -------------------------------------------------------------------
 
 
-def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) -> Readings:
-    """All readings for one ticker from Yahoo; never raises for missing data."""
+def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None, cut=None) -> Readings:
+    """All readings for one ticker from Yahoo; never raises for missing data.
+
+    ``cut(values) -> reason`` is Trela's screener: when it rejects the company
+    on the cheap readings, the price history and target history (the bulk of
+    the requests) are not fetched - Yahoo throttles a full-market run.
+    """
     import yfinance as yf
 
     today = (today or pd.Timestamp.today()).normalize()
@@ -278,6 +288,11 @@ def fetch_readings(ticker: str, fx_to_usd, today: pd.Timestamp | None = None) ->
         _latest(balance, "Working Capital"), _latest(balance, "Retained Earnings"),
         _latest(income, "EBIT"), equity, assets, liabilities,
     )
+
+    if cut is not None:
+        r.prefiltr = cut(v)
+        if r.prefiltr:
+            return r
 
     # Price-target rules, from the rebuilt consensus.
     actions = _safe(lambda: t.upgrades_downgrades, pd.DataFrame())

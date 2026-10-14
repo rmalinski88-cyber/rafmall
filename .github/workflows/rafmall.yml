@@ -41,7 +41,8 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    # 120: model Treli pobiera ~750 spółek z Yahoo w tempie, którego Yahoo nie przycina.
+    timeout-minutes: 120
     env:
       SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
@@ -104,7 +105,12 @@ jobs:
               ;;
             # Model Treli (129 pkt): cały rynek USA >= 10 mld USD przez filtr wstępny Treli,
             # spółki humanoidalne oznaczone. Wynik w logu, artefakcie i na Discordzie (gdy jest sekret).
-            trela) python -m screener trela --discord ;;
+            # CSV też do logu: sesja w chmurze nie pobiera artefaktów, a z CSV odtwarza pełny raport
+            # (python -m screener trela --z-csv PLIK).
+            trela)
+              python -m screener trela --discord
+              echo "=== TRELA CSV ==="; cat out/trela_*.csv; echo "=== KONIEC CSV ==="
+              ;;
             # Ten sam model na globalnej liście humanoidów (Azja bez historii cen docelowych).
             trela_lista) python -m screener --universe data/universe_humanoid_global.csv trela ;;
             # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').

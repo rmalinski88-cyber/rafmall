@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import csv
 import sys
+import threading
+import time
 from datetime import date
 from html import escape
 from pathlib import Path
+
+import pandas as pd
 
 from ..report import format as fmt
 from .data import Readings, fetch_readings
@@ -35,13 +39,17 @@ def run_trela(universe, model: Model, fetch, progress=None, workers: int = 1,
     names = dict(zip(universe["ticker"], universe.get("name", universe["ticker"])))
     humanoid = dict(zip(universe["ticker"], universe["humanoid"])) if "humanoid" in universe else {}
     for ticker, r in readings.items():
-        if names.get(ticker):
+        if names.get(ticker) and names[ticker] != ticker:
             r.name = names[ticker]
         r.humanoid = bool(humanoid.get(ticker, False))
-        if prefilter and not r.humanoid:
+        if r.humanoid:
+            r.prefiltr = ""
+        elif prefilter and not r.prefiltr:
             r.prefiltr = prefilter_reason(r.values, model.prefilter)
 
-    ranked = {t: r for t, r in readings.items() if not r.prefiltr}
+    # A fetch that returned nothing is not ranked at all: 0% would read as a
+    # verdict on the company.  The report lists these separately.
+    ranked = {t: r for t, r in readings.items() if not r.prefiltr and not r.empty}
     scores, dropped = score_universe(
         {t: r.values for t, r in ranked.items()},
         model,
@@ -75,6 +83,23 @@ def _fetch_all(tickers, fetch, progress, workers: int) -> dict[str, Readings]:
             if progress:
                 progress(position, len(tickers), ticker)
     return {t: readings[t] for t in tickers}
+
+
+_THROTTLE = threading.Lock()
+
+
+def fetch_with_retry(fetch, pauses=(20, 60), sleep=time.sleep) -> Readings:
+    """Retry a fetch that came back empty: Yahoo answers a burst of requests
+    with 401/429 for a while and then recovers.  The lock spaces the retries
+    out so they do not arrive as another burst."""
+    result = fetch()
+    for pause in pauses:
+        if not result.empty:
+            break
+        with _THROTTLE:
+            sleep(pause)
+        result = fetch()
+    return result
 
 
 def prefilter_reason(values: dict, minimums: dict) -> str:
@@ -137,15 +162,23 @@ def run_summary(scores, readings, source: str = "") -> list[str]:
     if source:
         lines.append(f"Uniwersum: {source}.")
     cut = [r for r in readings.values() if r.prefiltr]
-    if cut:
+    failed = failed_fetches(readings)
+    if cut or failed:
         lines.append(f"Sprawdzono {len(readings)} spółek; filtr wstępny Treli odrzucił {len(cut)}, "
-                     f"w rankingu {len(scores)}.")
+                     f"bez danych z Yahoo {len(failed)}, w rankingu {len(scores)}.")
+    if failed and len(failed) > 0.1 * len(readings):
+        lines.append(f"UWAGA: Yahoo nie zwróciło danych dla {len(failed)} spółek (limit zapytań?) — "
+                     "ich nie ma w rankingu; powtórz przebieg później.")
     if scores:
         no_pt = sum(1 for s in scores if all(s.readings.get(r) is None for r in PT_RULES))
         if no_pt / len(scores) > PT_MISSING_WARN:
             lines.append(f"UWAGA: {no_pt} z {len(scores)} spółek bez historii cen docelowych z Yahoo — "
                          "filar Wycena (41 pkt) jest dla nich pusty, ranking mniej wiarygodny.")
     return lines
+
+
+def failed_fetches(readings) -> list[Readings]:
+    return [r for r in readings.values() if r.empty and not r.prefiltr]
 
 
 def humanoid_positions(scores) -> list[tuple[int, CompanyScore]]:
@@ -213,7 +246,7 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
         writer = csv.writer(handle)
         writer.writerow(["pozycja", "ticker", "nazwa", "wynik_pct", "excel_pct", "punkty", "maksimum",
                          "flagi", "braki", "upside_teraz", "humanoid", *[f"odczyt_{i}" for i in rule_ids],
-                         *[f"pkt_{i}" for i in rule_ids], "uwagi"])
+                         *[f"pkt_{i}" for i in rule_ids], "uwagi", "lata_od_ipo", "cena_docelowa"])
         for i, s in enumerate(scores, start=1):
             r = readings[s.ticker]
             writer.writerow([
@@ -222,14 +255,50 @@ def write_csv(scores, readings, model: Model, path: Path) -> None:
                 _round(r.upside_now), int(r.humanoid),
                 *[_round(s.readings.get(rid)) for rid in rule_ids],
                 *[_round(s.points.get(rid)) for rid in rule_ids],
-                " | ".join(r.notes),
+                " | ".join(r.notes), _round(r.years_since_ipo), _round(r.price_target),
             ])
         for r in readings.values():
-            if r.prefiltr:
-                writer.writerow(["", r.ticker, r.name, "", "", "", "", f"filtr wstępny: {r.prefiltr}", "",
+            if r.prefiltr or r.empty:
+                flag = f"{PREFILTER_MARK}{r.prefiltr}" if r.prefiltr else "brak danych z Yahoo"
+                writer.writerow(["", r.ticker, r.name, "", "", "", "", flag, "",
                                  _round(r.upside_now), int(r.humanoid),
                                  *[_round(r.values.get(rid)) for rid in rule_ids],
-                                 *["" for _ in rule_ids], " | ".join(r.notes)])
+                                 *["" for _ in rule_ids], " | ".join(r.notes),
+                                 _round(r.years_since_ipo), _round(r.price_target)])
+
+
+PREFILTER_MARK = "filtr wstępny: "
+
+
+def read_csv_readings(path: Path, model: Model) -> tuple[pd.DataFrame, dict[str, Readings]]:
+    """``(universe, readings)`` back from a report CSV, so a report can be
+    rebuilt without fetching again (e.g. from a CSV printed in an Actions log)."""
+    readings: dict[str, Readings] = {}
+    with Path(path).open(encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            values = {r.id: _float(row.get(f"odczyt_{r.id}")) for r in model.rules}
+            flags = row.get("flagi") or ""
+            readings[row["ticker"]] = Readings(
+                ticker=row["ticker"], name=row.get("nazwa") or row["ticker"], values=values,
+                notes=[n for n in (row.get("uwagi") or "").split(" | ") if n],
+                years_since_ipo=_float(row.get("lata_od_ipo")),
+                upside_now=_float(row.get("upside_teraz")),
+                price_target=_float(row.get("cena_docelowa")),
+                humanoid=row.get("humanoid") == "1",
+                prefiltr=flags[len(PREFILTER_MARK):] if flags.startswith(PREFILTER_MARK) else "",
+            )
+    universe = pd.DataFrame({
+        "ticker": list(readings), "name": [r.name for r in readings.values()],
+        "humanoid": [r.humanoid for r in readings.values()],
+    })
+    return universe, readings
+
+
+def _float(text):
+    try:
+        return float(text) if text not in (None, "") else None
+    except ValueError:
+        return None
 
 
 def _round(value):
@@ -260,6 +329,11 @@ def write_html(scores, dropped, readings, model: Model, path: Path, source: str 
             "maksimum bez wyceny – porównuj te spółki między sobą, nie z listą wyżej. Trela stosuje model tylko do giełd USA.</p>"
             + _html_table(partial, readings, model, use_available=True)
         )
+    failed = failed_fetches(readings)
+    if failed:
+        tables += (f"<h2>Bez danych z Yahoo ({len(failed)})</h2><p class='note'>Nie oceniane — brak odpowiedzi "
+                   "źródła to nie ocena spółki.</p><p class='note'>"
+                   + escape(", ".join(r.ticker for r in failed)) + "</p>")
     cut = [r for r in readings.values() if r.prefiltr]
     if cut:
         items = "".join(f"<li><b>{escape(r.ticker)}</b> {escape(r.name or '')}: "
@@ -379,11 +453,22 @@ def cmd_trela(args, config, universe) -> int:
     model = load_model(getattr(args, "model", None) or "config/trela.yml")
     fx_source = YahooProvider(cache=Cache(config.get("cache_dir", ".cache"), config.get("cache_ttl_hours", 12)))
 
-    if universe is None:
-        universe, source = us_universe(model.prefilter.get("market_cap", 10e9))
-        prefilter = True
+    from_csv = getattr(args, "z_csv", None)
+    if from_csv:
+        universe, stored = read_csv_readings(Path(from_csv), model)
+        source = f"odtworzone z {Path(from_csv).name} (bez ponownego pobierania)"
+        fetch, prefilter = stored.__getitem__, False   # the stored cut (Readings.prefiltr) stays as it was
     else:
-        source, prefilter = f"plik ({len(universe)} spółek), bez filtra wstępnego", False
+        def fetch(ticker):
+            return fetch_with_retry(
+                lambda: fetch_readings(ticker, fx_source.get_fx_to_usd,
+                                       cut=(lambda v: prefilter_reason(v, model.prefilter)) if prefilter else None))
+
+        if universe is None:
+            universe, source = us_universe(model.prefilter.get("market_cap", 10e9))
+            prefilter = True
+        else:
+            source, prefilter = f"plik ({len(universe)} spółek), bez filtra wstępnego", False
     print(f"Model Treli: {len(universe)} spółek — {source}", file=sys.stderr)
 
     def progress(position, total, ticker):
@@ -391,8 +476,8 @@ def cmd_trela(args, config, universe) -> int:
             print(f"  [{position}/{total}] {ticker}", file=sys.stderr, flush=True)
 
     scores, dropped, readings = run_trela(
-        universe, model, lambda t: fetch_readings(t, fx_source.get_fx_to_usd), progress=progress,
-        workers=getattr(args, "workers", 4) or 1, prefilter=prefilter,
+        universe, model, fetch, progress=progress,
+        workers=getattr(args, "workers", 2) or 1, prefilter=prefilter,
     )
     print(render_console(scores, dropped, readings, model, top=getattr(args, "top", None), source=source))
 

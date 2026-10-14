@@ -51,8 +51,9 @@ def test_fetch_error_is_contained():
         return _fake("AAA")
 
     scores, _, readings = run_trela(universe, model, fetch)
-    assert len(scores) == 2
+    assert [s.ticker for s in scores] == ["AAA"]           # a failed fetch is not ranked as 0%
     assert "boom" in readings["ERR"].notes[0]
+    assert "bez danych z Yahoo 1" in render_console(scores, [], readings, model)
 
 
 def test_companies_without_target_history_get_their_own_list(tmp_path):
