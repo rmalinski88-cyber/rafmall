@@ -246,6 +246,11 @@ class TradingViewProvider(DataProvider):
             if column not in self.dropped_columns:
                 self.dropped_columns.append(column)
 
+    def raw_row(self, ticker: str) -> dict | None:
+        """The screener's row exactly as received - for diagnosing units."""
+        row = self._row(ticker)
+        return dict(row) if row else None
+
     def _row(self, ticker: str) -> dict | None:
         symbol = to_tradingview(ticker)
         if symbol not in self._requested:

@@ -92,7 +92,11 @@ jobs:
             alerts)   python -m tracker alerts --discord ;;
             market)   python -m tracker market --discord ;;
             scan)     python -m tracker scan --new-only --no-quotes ;;
-            screener) python -m screener run --no-obsidian ;;
+            screener)
+              python -m screener run --no-obsidian
+              # Surowe pola TradingView dla trzech walut (w tym HK raportujące w CNY): kontrola jednostek.
+              for t in 2330.TW 005930.KS 9880.HK; do python -m screener show "$t" --raw || true; done
+              ;;
             site)
               python -m screener --provider yahoo --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
               if [ -n "$FTP_HOST" ]; then python scripts/publish.py; else echo "Brak sekretów FTP - strona tylko jako plik do pobrania."; fi

@@ -89,6 +89,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     show = sub.add_parser("show", help="wypisz komplet wskaźników dla jednej spółki")
     show.add_argument("ticker", help="np. 6324.T")
+    show.add_argument(
+        "--raw",
+        action="store_true",
+        help="wypisz surowe pola od dostawcy (diagnostyka jednostek i walut)",
+    )
 
     return parser
 
@@ -289,6 +294,14 @@ def _cmd_show(args, config, provider) -> int:
 
     benchmark_symbol = benchmark_for(ticker, config)
     provider.prefetch([ticker, *([benchmark_symbol] if benchmark_symbol else [])])
+
+    if getattr(args, "raw", False):
+        raw = provider.raw_row(ticker) if hasattr(provider, "raw_row") else None
+        print(f"\nSurowe pola {provider.name} dla {ticker}:")
+        for key, value in (raw or {}).items():
+            print(f"  {key:<36}{value!r}")
+        if not raw:
+            print("  (dostawca nie udostępnia surowych pól)")
 
     prices = provider.get_prices(ticker, lookback)
     if prices is not None and not prices.empty:
