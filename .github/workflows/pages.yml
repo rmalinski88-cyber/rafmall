@@ -56,7 +56,7 @@ jobs:
         continue-on-error: true
         run: |
           sig=$(ls out/signals_*.json 2>/dev/null | tail -1)
-          python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html \
+          python -m screener --provider yahoo --universe data/universe_humanoid_global.csv site --out out/site/roboty.html \
             --extra "Surowce=data/universe_surowce.csv" --extra "Energia=data/universe_infrastruktura.csv" \
             --extra "Inne tematy=data/universe_inne.csv" ${sig:+--signals "$sig"}
       - name: Hub (szukaj, okazje, inwestorzy, api)

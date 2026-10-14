@@ -94,7 +94,7 @@ jobs:
             scan)     python -m tracker scan --new-only --no-quotes ;;
             screener) python -m screener run --no-obsidian ;;
             site)
-              python -m screener --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
+              python -m screener --provider yahoo --universe data/universe_humanoid_global.csv site --out out/site/roboty.html
               if [ -n "$FTP_HOST" ]; then python scripts/publish.py; else echo "Brak sekretów FTP - strona tylko jako plik do pobrania."; fi
               ;;
           esac
