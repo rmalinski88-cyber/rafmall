@@ -41,7 +41,19 @@ _SUFFIX_EXCHANGE = {
     ".HK": "HKEX",
     ".SS": "SSE",
     ".SZ": "SZSE",
+    ".DE": "XETR",
+    ".F": "FWB",
+    ".PA": "EURONEXT",
+    ".AS": "EURONEXT",
+    ".SW": "SIX",
+    ".ST": "OMXSTO",
+    ".L": "LSE",
+    ".MI": "MIL",
+    ".WA": "GPW",
 }
+
+# Share-class separator: Yahoo writes SKF-B.ST, TradingView OMXSTO:SKF_B.
+_CLASS_UNDERSCORE = {"OMXSTO"}
 
 # Benchmark indices as the config names them (Yahoo symbols) -> TradingView
 # candidates, tried in order.  The screener answers only for symbols it
@@ -131,6 +143,8 @@ def to_tradingview(ticker: str) -> str:
             symbol = upper[: -len(suffix)]
             if exchange in _STRIP_ZEROS:
                 symbol = symbol.lstrip("0") or "0"
+            if exchange in _CLASS_UNDERSCORE:
+                symbol = symbol.replace("-", "_")
             return f"{exchange}:{symbol}"
     return upper
 

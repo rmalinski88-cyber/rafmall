@@ -335,3 +335,6 @@ def test_chart_links_for_every_market():
     assert tradingview_url("2330.TW") == base + "TWSE%3A2330"
     assert tradingview_url("NVDA", "NASDAQ") == base + "NASDAQ%3ANVDA"
     assert tradingview_url("BRK-B") == base + "BRK.B"
+    assert tradingview_url("ABBN.SW") == base + "SIX%3AABBN"
+    assert tradingview_url("SKF-B.ST") == base + "OMXSTO%3ASKF_B"
+    assert tradingview_url("STMPA.PA") == base + "EURONEXT%3ASTMPA"
