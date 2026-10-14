@@ -43,16 +43,21 @@ _SUFFIX_EXCHANGE = {
     ".SZ": "SZSE",
 }
 
-# Benchmark indices as the config names them (Yahoo symbols) -> TradingView.
-_INDEX_SYMBOLS = {
-    "^N225": "TVC:NI225",
-    "^KS11": "KRX:KOSPI",
-    "^KQ11": "KRX:KOSDAQ",
-    "^TWII": "TWSE:TAIEX",
-    "^HSI": "HSI:HSI",
-    "000001.SS": "SSE:000001",
-    "399001.SZ": "SZSE:399001",
+# Benchmark indices as the config names them (Yahoo symbols) -> TradingView
+# candidates, tried in order.  The screener answers only for symbols it
+# knows, so an index with an uncertain name gets several spellings and the
+# first one that comes back wins.  (TWSE:TAIEX returned nothing on the first
+# real run, 14 Oct 2026.)
+_INDEX_CANDIDATES = {
+    "^N225": ["TVC:NI225"],
+    "^KS11": ["KRX:KOSPI"],
+    "^KQ11": ["KRX:KOSDAQ"],
+    "^TWII": ["TWSE:TAIEX", "TVC:TAIEX", "TWSE:IX0001", "TVC:TWII"],
+    "^HSI": ["HSI:HSI"],
+    "000001.SS": ["SSE:000001"],
+    "399001.SZ": ["SZSE:399001"],
 }
+_INDEX_SYMBOLS = {name: candidates[0] for name, candidates in _INDEX_CANDIDATES.items()}
 
 # Exchanges whose tickers TradingView writes without leading zeros.
 _STRIP_ZEROS = {"HKEX"}
@@ -84,9 +89,15 @@ FUNDAMENTAL_COLUMNS = [
     ("ev_to_ebitda", "enterprise_value_ebitda_ttm", "raw"),
 ]
 
-# Money amounts reported in the fundamental currency, which can differ from
-# the listing currency (a Hong Kong listing reporting in CNY).
-_MONEY_FIELDS = ("total_revenue", "total_cash", "total_debt", "free_cashflow", "operating_cashflow")
+# Money amounts - market cap included - arrive in `fundamental_currency_code`,
+# which on the global scan is USD even for Tokyo, Seoul and Hong Kong
+# listings (verified on raw rows, 14 Oct 2026: Samsung cash 1.2e11, UBTech
+# reporting currency 'USD'); prices and SMAs stay in the listing currency.
+# Everything is brought into the listing currency so the pipeline's single
+# listing-currency FX conversion is correct.
+_MONEY_FIELDS = (
+    "market_cap", "total_revenue", "total_cash", "total_debt", "free_cashflow", "operating_cashflow",
+)
 
 TECHNICAL_COLUMNS = [
     "close", "volume", "SMA50", "SMA200", "RSI", "MACD.macd", "MACD.signal",
@@ -166,7 +177,11 @@ class TradingViewProvider(DataProvider):
     # -- bulk fetch ----------------------------------------------------
 
     def prefetch(self, tickers: list[str]) -> None:
-        symbols = [to_tradingview(t) for t in tickers if t]
+        symbols: list[str] = []
+        for ticker in tickers:
+            if not ticker:
+                continue
+            symbols.extend(_INDEX_CANDIDATES.get(ticker, [to_tradingview(ticker)]))
         self._fetch_symbols(symbols)
 
         currencies: set[str] = set()
@@ -184,7 +199,13 @@ class TradingViewProvider(DataProvider):
         for start in range(0, len(pending), CHUNK_SIZE):
             chunk = pending[start : start + CHUNK_SIZE]
             self._rows.update(self._scan(chunk, ALL_COLUMNS))
-        missing = [s for s in pending if s not in self._rows]
+        # An index counts as missing only when none of its spellings answered;
+        # a failed alternate spelling is expected, not news.
+        index_symbols = {c for cands in _INDEX_CANDIDATES.values() for c in cands}
+        missing = [s for s in pending if s not in index_symbols and s not in self._rows]
+        for cands in _INDEX_CANDIDATES.values():
+            if any(c in pending for c in cands) and not any(c in self._rows for c in cands):
+                missing.append(" / ".join(cands))
         if missing:
             self._notes.append(
                 f"TradingView nie zwrócił danych dla: {', '.join(missing)}"
@@ -252,11 +273,13 @@ class TradingViewProvider(DataProvider):
         return dict(row) if row else None
 
     def _row(self, ticker: str) -> dict | None:
-        symbol = to_tradingview(ticker)
-        if symbol not in self._requested:
-            self._fetch_symbols([symbol])
-            self.prefetch([])  # pick up FX for a currency seen for the first time
-        return self._rows.get(symbol)
+        candidates = _INDEX_CANDIDATES.get(ticker, [to_tradingview(ticker)])
+        if any(c not in self._requested for c in candidates):
+            self.prefetch([ticker])  # also picks up FX for a currency seen for the first time
+        for symbol in candidates:
+            if symbol in self._rows:
+                return self._rows[symbol]
+        return None
 
     # -- DataProvider --------------------------------------------------
 
@@ -285,8 +308,8 @@ class TradingViewProvider(DataProvider):
                 value = value / 100.0
             out[canonical] = value
 
-        # Money amounts arrive in the reporting currency; market cap in the
-        # listing currency.  Bring the amounts over so ratios stay honest.
+        # Money amounts arrive in the reporting currency; bring them into the
+        # listing currency so ratios and the pipeline's FX step stay honest.
         if listing and reporting and reporting != listing:
             factor = self._cross_rate(reporting, listing)
             for field in _MONEY_FIELDS:

@@ -56,7 +56,8 @@ def value_for(symbol: str, column: str):
     if column == "currency":
         return CURRENCY_BY_EXCHANGE[exchange]
     if column == "fundamental_currency_code":
-        return "CNY" if exchange == "HKEX" else CURRENCY_BY_EXCHANGE[exchange]
+        # As observed on the real global scan: money fields arrive in USD.
+        return "USD"
     if column == "type":
         return "index" if exchange in ("TVC", "HSI") or symbol.endswith(":KOSPI") else "stock"
     seed = _seed(symbol, column)
@@ -81,7 +82,7 @@ def value_for(symbol: str, column: str):
     return 1.0 + seed * 10
 
 
-def make_transport(missing=(), reject=None, calls=None):
+def make_transport(missing=("TWSE:TAIEX",), reject=None, calls=None):
     """A stand-in for ``requests.post`` against the screener endpoint."""
     calls = calls if calls is not None else []
 
@@ -188,16 +189,44 @@ def test_fx_rates_are_usd_per_unit_of_currency():
     assert provider.get_fx_to_usd("USD") == 1.0
 
 
-def test_reporting_currency_is_converted_to_listing_currency():
-    # HKEX listing, books in CNY: amounts must arrive in HKD so that
-    # net_cash / market_cap compares like with like.
+def test_money_fields_including_market_cap_move_to_listing_currency():
+    # The global scan reports every amount, market cap included, in USD while
+    # prices stay local.  Converting cash but not market cap made Samsung's
+    # net cash 13 179% of its market cap on the first real run.
     provider = TradingViewProvider(transport=make_transport())
     fundamentals = provider.get_fundamentals("9880.HK")
 
-    raw_revenue = value_for("HKEX:9880", "total_revenue_ttm")
-    cny_to_hkd = (1 / 7.2) / (1 / 7.8)
-    assert fundamentals["total_revenue"] == pytest.approx(raw_revenue * cny_to_hkd)
-    assert fundamentals["market_cap"] == pytest.approx(value_for("HKEX:9880", "market_cap_basic"))
+    usd_to_hkd = 7.8
+    assert fundamentals["total_revenue"] == pytest.approx(
+        value_for("HKEX:9880", "total_revenue_ttm") * usd_to_hkd
+    )
+    assert fundamentals["market_cap"] == pytest.approx(
+        value_for("HKEX:9880", "market_cap_basic") * usd_to_hkd
+    )
+
+
+def test_market_cap_round_trips_to_the_reported_usd_figure(universe, config):
+    provider = TradingViewProvider(transport=make_transport())
+    result = run_screen(universe, provider, config, profile_name="growth")
+    row = result.ranked.set_index("ticker").loc[result.ranked.iloc[0]["ticker"]]
+    symbol = to_tradingview(row.name)
+    assert row["market_cap_usd"] == pytest.approx(value_for(symbol, "market_cap_basic"))
+
+
+def test_index_falls_back_to_an_alternate_spelling():
+    # TWSE:TAIEX is unknown to the screener; an alternate answers instead.
+    provider = TradingViewProvider(transport=make_transport())
+    provider.prefetch(["^TWII"])
+    assert provider.get_technicals("^TWII") is not None
+    assert not any("TAIEX" in note for note in provider.diagnostics())
+
+
+def test_index_with_no_answering_spelling_is_reported():
+    gone = ("TWSE:TAIEX", "TVC:TAIEX", "TWSE:IX0001", "TVC:TWII")
+    provider = TradingViewProvider(transport=make_transport(missing=gone))
+    provider.prefetch(["^TWII"])
+    assert provider.get_technicals("^TWII") is None
+    assert any("TWSE:TAIEX" in note for note in provider.diagnostics())
 
 
 def test_rejected_field_is_dropped_reported_and_the_request_retried():
