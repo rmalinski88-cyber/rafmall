@@ -45,9 +45,49 @@ def run_trela(universe, model: Model, fetch, progress=None) -> tuple[list[Compan
     return scores, dropped, readings
 
 
+PT_RULES = ("pt_change_180d", "pt_drawdown_45d", "upside_vs_history")
+
+
+def split_by_pt_data(scores: list[CompanyScore]) -> tuple[list[CompanyScore], list[CompanyScore]]:
+    """``(full model, no price-target history)``.
+
+    Trela's model is built for US listings; Yahoo has no analyst-target
+    history for Tokyo, Seoul, Taipei or Hong Kong, so those companies cannot
+    earn the 41 value points.  Mixing them into one list would rank them on
+    missing data, so they get their own list, compared on the points they
+    can earn.
+    """
+    full, partial = [], []
+    for s in scores:
+        (partial if all(s.readings.get(r) is None for r in PT_RULES) else full).append(s)
+    partial.sort(key=lambda s: (s.flagged, -available_pct(s), s.ticker))
+    return full, partial
+
+
+def available_pct(s: CompanyScore) -> float:
+    value_max = s.pillars.get("value", (0, 0))[1]
+    available = s.max_total - value_max
+    return (s.total / available) if available else 0.0
+
+
 def render_console(scores, dropped, readings, model: Model, top: int | None = None) -> str:
+    full, partial = split_by_pt_data(scores)
+    out = [_render_block(full, dropped, readings, model, top, "PEŁNY MODEL (USA i spółki z historią ceny docelowej)")]
+    if partial:
+        out.append(_render_block(
+            partial, [], readings, model, top,
+            "BEZ HISTORII CENY DOCELOWEJ (giełdy azjatyckie i europejskie): wynik = punkty / maksimum bez wyceny",
+            use_available=True,
+        ))
+    return "\n\n".join(out)
+
+
+def _render_block(scores, dropped, readings, model: Model, top, title, use_available=False) -> str:
     active_max = scores[0].max_total if scores else model.max_points
+    if use_available and scores:
+        active_max -= scores[0].pillars.get("value", (0, 0))[1]
     lines = [
+        f"=== {title} ===",
         f"{model.name} | {date.today().isoformat()} | spółek: {len(scores)} | maksimum: {active_max:g} pkt",
     ]
     if dropped:
@@ -62,12 +102,14 @@ def render_console(scores, dropped, readings, model: Model, top: int | None = No
         r = readings[s.ticker]
         g, f, v, m = (s.pillars.get(p, (0, 0)) for p in ("growth", "fundamentals", "value", "must_have"))
         note = "FLAGA: " + "; ".join(s.flags) if s.flags else (f"brak: {len(s.missing)}" if s.missing else "")
+        shown_pct = available_pct(s) if use_available else s.pct
         lines.append(
-            f"{i:>3}  {s.ticker:<10}{(r.name or s.ticker)[:27]:<28}{s.pct * 100:>6.1f}%  "
+            f"{i:>3}  {s.ticker:<10}{(r.name or s.ticker)[:27]:<28}{shown_pct * 100:>6.1f}%  "
             f"{g[0]:>4.1f}/{g[1]:<2g} {f[0]:>4.1f}/{f[1]:<2g} {v[0]:>4.1f}/{v[1]:<2g}  {m[0]:>1.0f}/{m[1]:g}  {note}"
         )
-    lines += ["", "Zielony >= 70%, czerwony < 40% (jak w Scrab). Model Treli to podpowiedź do ręcznego",
-              "przeglądu TOP 50, nie rekomendacja inwestycyjna."]
+    if not use_available:
+        lines += ["", "Zielony >= 70%, czerwony < 40% (jak w Scrab). Model Treli to podpowiedź do ręcznego",
+                  "przeglądu TOP 50, nie rekomendacja inwestycyjna."]
     return "\n".join(lines)
 
 
@@ -95,10 +137,24 @@ def _round(value):
 
 
 def write_html(scores, dropped, readings, model: Model, path: Path) -> None:
+    full, partial = split_by_pt_data(scores)
+    tables = _html_table(full, readings, model, use_available=False)
+    if partial:
+        tables += (
+            "<h2>Bez historii ceny docelowej</h2><p class='note'>Giełdy azjatyckie i europejskie: Yahoo nie publikuje "
+            "dla nich historii cen docelowych analityków, więc reguły wyceny (41 pkt) nie mają danych. Wynik = punkty / "
+            "maksimum bez wyceny – porównuj te spółki między sobą, nie z listą wyżej. Trela stosuje model tylko do giełd USA.</p>"
+            + _html_table(partial, readings, model, use_available=True)
+        )
+    _write_page(scores, dropped, model, tables, path)
+
+
+def _html_table(scores, readings, model: Model, use_available: bool) -> str:
     rows = []
     for i, s in enumerate(scores, start=1):
         r = readings[s.ticker]
-        state = "flag" if s.flagged else ("green" if s.pct >= model.green else ("red" if s.pct < model.red else "mid"))
+        shown = available_pct(s) if use_available else s.pct
+        state = "flag" if s.flagged else ("green" if shown >= model.green else ("red" if shown < model.red else "mid"))
         cells = "".join(
             f'<td class="num">{s.pillars[p][0]:.1f}<span class="sub">/{s.pillars[p][1]:g}</span></td>'
             for p in ("growth", "fundamentals", "value", "must_have")
@@ -113,11 +169,20 @@ def write_html(scores, dropped, readings, model: Model, path: Path) -> None:
         rows.append(
             f"<tr class='{state}'><td class='num'>{i}</td>"
             f"<td><b>{escape(r.name or s.ticker)}</b><div class='sub'>{escape(s.ticker)}</div>{flags}</td>"
-            f"<td class='num score'>{s.pct * 100:.1f}%</td>{cells}"
+            f"<td class='num score'>{shown * 100:.1f}%</td>{cells}"
             f"<td class='num'>{fmt.pct(r.upside_now, signed=True)}</td>"
             f"<td><details><summary>{len(s.missing)} braków</summary><ul>{detail}</ul>"
             f"{'<ul class=sub>' + notes + '</ul>' if notes else ''}</details></td></tr>"
         )
+    return (
+        '<div class="scroll"><table><thead><tr><th>#</th><th>Spółka</th><th class="num">Wynik</th>'
+        '<th class="num">Zyskowność</th><th class="num">Fundamenty</th><th class="num">Wycena</th>'
+        '<th class="num">Must-have</th><th class="num">Upside</th><th>Szczegóły</th></tr></thead>'
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
+def _write_page(scores, dropped, model: Model, tables: str, path: Path) -> None:
     dropped_html = (
         "<p class='note'>Wyłączone z maksimum (źródło nie publikuje tych danych): "
         + ", ".join(f"{escape(r.nazwa)} ({r.max:g} pkt)" for r in dropped) + "</p>"
@@ -132,7 +197,7 @@ def write_html(scores, dropped, readings, model: Model, path: Path) -> None:
 @media (prefers-color-scheme:dark){{:root{{--bg:#0d0d0d;--card:#1a1a19;--fg:#fff;--sub:#c3c2b7;--line:#2c2c2a}}}}
 body{{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}}
 .wrap{{max-width:1200px;margin:0 auto;padding:28px 16px 64px}}
-h1{{font-size:1.5rem;margin:0 0 4px}} .note{{color:var(--sub);font-size:.88rem}}
+h1{{font-size:1.5rem;margin:0 0 4px}} h2{{font-size:1.1rem;margin:32px 0 4px}} .note{{color:var(--sub);font-size:.88rem}}
 .scroll{{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-top:18px}}
 table{{border-collapse:collapse;width:100%;font-size:.86rem}}
 th,td{{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}}
@@ -146,9 +211,7 @@ tr.green .score{{color:var(--good)}} tr.red .score{{color:var(--bad)}} tr.flag{{
 <p class="note">{date.today().isoformat()} · {len(scores)} spółek · maksimum {max_total:g} pkt ·
 wynik = suma punktów / maksimum (jak w Scrab); zielony ≥ {model.green:.0%}, czerwony &lt; {model.red:.0%}.
 Spółki z flagą Must-have są na końcu listy.</p>{dropped_html}
-<div class="scroll"><table><thead><tr><th>#</th><th>Spółka</th><th class="num">Wynik</th>
-<th class="num">Zyskowność</th><th class="num">Fundamenty</th><th class="num">Wycena</th><th class="num">Must-have</th>
-<th class="num">Upside</th><th>Szczegóły</th></tr></thead><tbody>{''.join(rows)}</tbody></table></div>
+{tables}
 <p class="note">Metoda: kurs Tomasza Treli (Uniwersytet Inwestycyjny 2026), model finalny ze spotkań 8 i 10.
 Dane: Yahoo Finance. Prognozy na 2 lata = średnia geometryczna prognoz na bieżący i następny rok obrotowy;
 zmiana w 5 lat przeliczona ze średniorocznego tempa, gdy sprawozdań jest mniej; cena docelowa odtworzona

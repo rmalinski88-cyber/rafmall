@@ -53,3 +53,25 @@ def test_fetch_error_is_contained():
     scores, _, readings = run_trela(universe, model, fetch)
     assert len(scores) == 2
     assert "boom" in readings["ERR"].notes[0]
+
+
+def test_companies_without_target_history_get_their_own_list(tmp_path):
+    from screener.trela.run import split_by_pt_data
+
+    def fetch(t):
+        r = _fake("AAA")
+        if t == "ASIA":
+            r.values = {**r.values, "pt_change_180d": None, "pt_drawdown_45d": None, "upside_vs_history": None}
+        r.ticker = t
+        return r
+
+    model = load_model("config/trela.yml")
+    universe = pd.DataFrame({"ticker": ["AAA", "ASIA"], "name": ["A", "Asia Co"]})
+    scores, dropped, readings = run_trela(universe, model, fetch)
+    full, partial = split_by_pt_data(scores)
+    assert [s.ticker for s in full] == ["AAA"]
+    assert [s.ticker for s in partial] == ["ASIA"]
+    text = render_console(scores, dropped, readings, model)
+    assert "BEZ HISTORII CENY DOCELOWEJ" in text
+    write_html(scores, dropped, readings, model, tmp_path / "t.html")
+    assert "Bez historii ceny docelowej" in (tmp_path / "t.html").read_text(encoding="utf-8")
