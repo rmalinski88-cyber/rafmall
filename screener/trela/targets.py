@@ -26,7 +26,11 @@ from .data import Readings, channel_position, pt_change, pt_max_drawdown
 
 # Tried in this order; the first non-empty one is the consensus.
 TARGET_COLUMNS = ["price_target_average", "price_target_median", "price_target_1y"]
-EXTRA_COLUMNS = ["close", "currency", "price_target_high", "price_target_low"]
+EXTRA_COLUMNS = ["close", "currency", "fundamental_currency_code", "price_target_high", "price_target_low"]
+# Targets arrive in the reporting currency (USD on the global scan, first live run 14 Oct 2026:
+# TSMC 104 against a 2 490 TWD price); a converted upside outside this band is still a unit
+# mismatch, not an opinion, and is dropped.
+PLAUSIBLE_UPSIDE = (-0.8, 3.0)
 US_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
 PT_RULES = ("pt_change_180d", "pt_drawdown_45d", "upside_vs_history")
 
@@ -71,6 +75,11 @@ class TargetHistory:
         keep = ~((self.frame["date"] == day) & self.frame["ticker"].isin(new["ticker"]))
         self.frame = pd.concat([self.frame[keep], new], ignore_index=True).sort_values(["ticker", "date"])
 
+    def forget(self, day, tickers) -> None:
+        """Drop ``day``'s snapshots for ``tickers`` - a re-run replaces the day, even rows it now rejects."""
+        day = pd.Timestamp(day).normalize()
+        self.frame = self.frame[~((self.frame["date"] == day) & self.frame["ticker"].isin(list(tickers)))]
+
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         out = self.frame.copy()
@@ -106,15 +115,34 @@ class TradingViewTargets:
             return 0
         for ticker, row in rows.items():
             target = next((_number(row.get(c)) for c in TARGET_COLUMNS if _number(row.get(c))), None)
-            if target:
-                self.snapshot[ticker] = {"target": target, "close": _number(row.get("close")),
-                                         "high": _number(row.get("price_target_high")),
-                                         "low": _number(row.get("price_target_low"))}
+            close = _number(row.get("close"))
+            if not target:
+                continue
+            rate = self._to_listing(row)
+            if rate is None:
+                self.notes.append(f"{ticker}: brak kursu do przeliczenia celu na walutę notowania")
+                continue
+            target *= rate
+            if close and not PLAUSIBLE_UPSIDE[0] < target / close - 1.0 < PLAUSIBLE_UPSIDE[1]:
+                self.notes.append(f"{ticker}: cel {target:.2f} przy cenie {close:.2f} — pominięty (jednostki?)")
+                continue
+            self.snapshot[ticker] = {"target": target, "close": close,
+                                     "high": _scaled(row.get("price_target_high"), rate),
+                                     "low": _scaled(row.get("price_target_low"), rate)}
+        self.history.forget(self.today, candidates)
         self.history.record(self.today, {t: (v["target"], v["close"]) for t, v in self.snapshot.items()})
         dropped = [c for c in self.provider.dropped_columns if c in TARGET_COLUMNS + EXTRA_COLUMNS]
         if dropped:
             self.notes.append("TradingView odrzucił pola: " + ", ".join(dropped))
         return len(self.snapshot)
+
+    def _to_listing(self, row: dict) -> float | None:
+        """Listing-currency units per one reporting-currency unit (1.0 when they match)."""
+        listing = str(row.get("currency") or "").upper()
+        reporting = str(row.get("fundamental_currency_code") or listing).upper()
+        if not listing or reporting == listing:
+            return 1.0
+        return self.provider._cross_rate(reporting, listing)
 
     def fill(self, r: Readings) -> Readings:
         """Fill price-target readings Yahoo did not provide (Asian listings, some US)."""
@@ -145,6 +173,11 @@ def _upside_position(history: TargetHistory, ticker: str, current: float | None)
         return None
     monthly = (target / close - 1.0).dropna().resample("ME").last().dropna()
     return channel_position(current, monthly)
+
+
+def _scaled(value, rate: float) -> float | None:
+    number = _number(value)
+    return number * rate if number is not None else None
 
 
 def _number(value) -> float | None:

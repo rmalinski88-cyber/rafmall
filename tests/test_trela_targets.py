@@ -80,3 +80,33 @@ def test_unreachable_tradingview_does_not_stop_the_run(tmp_path):
     assert targets.prefetch(["6324.T"]) == 0 and targets.notes
     r = Readings("6324.T", values={"altman": 3.0})
     assert targets.fill(r) is r and r.upside_now is None
+
+
+def test_target_in_usd_is_converted_to_the_listing_currency(tmp_path):
+    rows = {
+        "TWSE:2330": {"close": 2490.0, "currency": "TWD", "fundamental_currency_code": "USD",
+                      "price_target_average": 104.4},
+        "FX_IDC:USDTWD": {"close": 31.6},
+        "TSE:6324": {"close": 4000.0, "currency": "JPY", "fundamental_currency_code": "USD",
+                     "price_target_average": 50.0},     # no USDJPY quote: cannot convert
+    }
+    targets = TradingViewTargets(TargetHistory(tmp_path / "h.csv"), provider=TradingViewProvider(transport=_transport(rows)))
+    assert targets.prefetch(["2330.TW", "6324.T"]) == 1
+    assert targets.snapshot["2330.TW"]["target"] == pytest.approx(104.4 * 31.6)
+    assert any("6324.T" in n for n in targets.notes)
+
+
+def test_implausible_upside_is_dropped(tmp_path):
+    rows = {"TSE:6324": {"close": 4000.0, "currency": "JPY", "price_target_average": 50.0}}
+    targets = TradingViewTargets(TargetHistory(tmp_path / "h.csv"), provider=TradingViewProvider(transport=_transport(rows)))
+    assert targets.prefetch(["6324.T"]) == 0
+    assert "jednostki" in targets.notes[-1]
+
+
+def test_rerun_on_the_same_day_drops_a_rejected_snapshot(tmp_path):
+    history = TargetHistory(tmp_path / "h.csv")
+    history.record("2026-10-14", {"6324.T": (50.0, 4000.0)})        # stored before the unit fix
+    rows = {"TSE:6324": {"close": 4000.0, "currency": "JPY", "price_target_average": 50.0}}
+    TradingViewTargets(history, provider=TradingViewProvider(transport=_transport(rows)),
+                       today="2026-10-14").prefetch(["6324.T"])
+    assert history.series("6324.T").empty
