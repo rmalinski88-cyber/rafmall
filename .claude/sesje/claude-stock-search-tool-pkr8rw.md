@@ -33,7 +33,12 @@
   zadanie `trela_cele` w dni robocze 9:23 UTC, `trela_lista` 7. dnia miesiąca. Linki TradingView w raportach
   (`tradingview_url` w `screener/providers/tradingview.py`). Apify: `scripts/probe_apify.py` + zadania
   `apify_szukaj` (darmowe: sklep, cenniki, schematy wejścia) i `apify_test` (limit 20 rekordów / 0,50 USD);
-  czeka na sekret `APIFY_TOKEN` od użytkownika (14.10 zalogował się do Apify).
+  sekret w repo nazywa się `APIFY1`. Wynik testów 14.10 (koszt 0 USD): aktor investing.com
+  (`pintostudio~stock-analyst-price-target-investing-com`) pobiera cel TSMC, ale pada przy zapisie
+  („Insufficient permissions for the dataset” pod LIMITED_PERMISSIONS, dwa różne klucze, z limitami i bez) —
+  błąd po stronie aktora; aktor MarketScreener (`saswave~…`) nie ma strony konsensusu (tylko valuation/news/
+  segments/shareholders); pozostałe aktory z celami są tylko dla USA. Decyzja: Apify niepodpięte, Azja = TradingView
+  + własna historia celów.
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego
