@@ -17,6 +17,8 @@
 - Dostawca TradingView (`screener/providers/tradingview.py`): domyślne źródło; fundamenty + wskaźniki
   w jednym zapytaniu, mapowanie tickerów na giełdy, FX, samonaprawa przy odrzuconym polu.
   Nazwy pól TradingView zweryfikowane dopiero przez przebieg GitHub Actions (stąd sieć zablokowana).
+- Model Treli (`python -m screener trela`, `config/trela.yml`, `screener/trela/`): 15 reguł / 129 pkt z notatek
+  `docs/treli` (gałąź `docs/treli`); dane Yahoo zweryfikowane zadaniem `probe`; przebieg Actions 14.10 OK (73 spółki).
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego
