@@ -49,6 +49,11 @@ def run_screen(
     lookback = int(config.get("lookback_days", 420))
     filters = config.get("filters") or {}
 
+    tickers = [t for t in universe["ticker"] if t]
+    benchmark_symbols = sorted({s for s in (benchmark_for(t, config) for t in tickers) if s})
+    # A bulk provider answers for everything in one request; others ignore this.
+    provider.prefetch([*tickers, *benchmark_symbols])
+
     benchmarks = _load_benchmarks(universe, provider, config, lookback)
 
     rows, prices, warnings = [], {}, []
@@ -69,16 +74,26 @@ def run_screen(
         }
 
         price_frame = provider.get_prices(ticker, lookback)
-        if price_frame is None or price_frame.empty:
+        has_prices = price_frame is not None and not price_frame.empty
+        technicals = None if has_prices else provider.get_technicals(ticker)
+
+        if not has_prices and not technicals:
             row["excluded_reason"] = "brak danych cenowych"
             rows.append(row)
-            warnings.append(f"{ticker}: provider zwrócił pusty szereg cenowy")
+            warnings.append(f"{ticker}: brak notowań u dostawcy")
             continue
 
-        prices[ticker] = price_frame["close"]
         benchmark_symbol = benchmark_for(ticker, config)
-        row.update(compute_technical_metrics(price_frame, benchmarks.get(benchmark_symbol)))
         row["benchmark"] = benchmark_symbol
+        if has_prices:
+            prices[ticker] = price_frame["close"]
+            row.update(compute_technical_metrics(price_frame, benchmarks.get(benchmark_symbol)))
+        else:
+            # Source-computed indicators; relative strength from the index's
+            # own performance figures, since there is no history to align.
+            row.update(technicals)
+            index = provider.get_technicals(benchmark_symbol) if benchmark_symbol else None
+            row.update(relative_strength_from_metrics(technicals, index))
 
         fundamentals = compute_fundamental_metrics(provider.get_fundamentals(ticker))
         # The universe file is the authority on the display name.
@@ -90,6 +105,7 @@ def run_screen(
     frame = pd.DataFrame(rows).set_index("ticker", drop=False)
     frame = _add_usd_columns(frame, provider, warnings)
     frame = _apply_filters(frame, filters)
+    warnings.extend(provider.diagnostics())
 
     passing = frame[frame["excluded_reason"].isna()].copy()
     rejected = frame[frame["excluded_reason"].notna()].copy()
@@ -142,6 +158,18 @@ def _load_benchmarks(
     for symbol in filter(None, symbols):
         frame = provider.get_prices(symbol, lookback)
         out[symbol] = frame["close"] if frame is not None and not frame.empty else None
+    return out
+
+
+def relative_strength_from_metrics(stock: dict, index: dict | None) -> dict:
+    """``rs_3m`` / ``rs_6m`` as stock return minus index return, when both exist."""
+    out = {"rs_3m": None, "rs_6m": None}
+    if not index:
+        return out
+    for label in ("3m", "6m"):
+        a, b = stock.get(f"ret_{label}"), index.get(f"ret_{label}")
+        if a is not None and b is not None:
+            out[f"rs_{label}"] = float(a) - float(b)
     return out
 
 

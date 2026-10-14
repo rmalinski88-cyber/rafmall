@@ -241,9 +241,21 @@ są w sekcji `obsidian:` konfiguracji.
 
 ## Dane
 
-Domyślnie **Yahoo Finance** przez `yfinance`: za darmo, bez klucza API,
-z pokryciem wszystkich potrzebnych giełd. Odpowiedzi są cache'owane w `.cache/`
-(domyślnie 12 h), bo darmowe źródła szybko wprowadzają limity zapytań.
+Domyślnie **TradingView** — publiczny endpoint skanera, bez logowania i bez
+klucza. Jedno zapytanie zwraca fundamenty **i** wskaźniki techniczne liczone
+przez TradingView (SMA, RSI, MACD, stopy zwrotu, zakres 52 tyg., wolumeny) dla
+całego uniwersum naraz, w jednym słowniku dla wszystkich giełd. Tickery z pliku
+uniwersum (styl Yahoo: `6324.T`, `9880.HK`) są mapowane na giełdy TradingView
+(`TSE:6324`, `HKEX:9880`); można też wpisać wprost `EXCHANGE:SYMBOL`.
+
+Czego TradingView nie daje: historii kursów. Dlatego raport z tego źródła nie
+ma wykresów kursów, a wskaźniki pochodzą z TradingView, nie z własnych obliczeń.
+Endpoint jest nieoficjalny: gdy odrzuci jakieś pole, screener powtarza zapytanie
+bez niego i wypisuje to w ostrzeżeniach — nic nie znika po cichu.
+
+Alternatywa: `--provider yahoo` (`yfinance`) — historia kursów, wskaźniki liczone
+lokalnie, wykresy w raporcie; fundamenty słabsze dla małych spółek azjatyckich.
+Odpowiedzi obu źródeł są cache'owane w `.cache/` (domyślnie 12 h).
 
 Jakość danych fundamentalnych z Yahoo jest nierówna: dobra dla dużych spółek
 japońskich i tajwańskich, słabsza dla małych spółek z KOSDAQ i giełd

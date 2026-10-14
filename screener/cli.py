@@ -13,7 +13,7 @@ from .analysis.fundamental import compute_fundamental_metrics
 from .analysis.technical import compute_technical_metrics
 from .cache import Cache
 from .config import benchmark_for, load_config
-from .pipeline import run_screen
+from .pipeline import relative_strength_from_metrics, run_screen
 from .providers import ProviderError, available_providers, get_provider
 from .report import format as fmt
 from .report.console import render_console
@@ -243,6 +243,7 @@ def _cmd_validate(args, config, provider) -> int:
     universe = _universe_for(args, config)
     lookback = int(config.get("lookback_days", 420))
     print(f"Weryfikacja {len(universe)} tickerów u dostawcy '{provider.name}'...\n")
+    provider.prefetch(list(universe["ticker"]))
 
     header = f"{'Ticker':<11}{'Sesje':>7}  {'Fund.':>6}  {'Nazwa z pliku':<30}Status"
     print(header)
@@ -253,23 +254,28 @@ def _cmd_validate(args, config, provider) -> int:
         ticker = entry["ticker"]
         prices = provider.get_prices(ticker, lookback)
         bars = 0 if prices is None or prices.empty else len(prices)
+        # A bulk source has no history but does have indicators: that counts.
+        technicals = provider.get_technicals(ticker) if bars == 0 else None
         fundamentals = provider.get_fundamentals(ticker) or {}
 
-        if bars == 0:
+        if bars == 0 and not technicals:
             status, failures = "BŁĄD — brak notowań", failures + 1
-        elif bars < 200:
+        elif 0 < bars < 200:
             status = "OSTRZEŻENIE — krótka historia"
         elif not fundamentals:
             status = "OSTRZEŻENIE — brak fundamentów"
         else:
             status = "OK"
 
+        sessions = str(bars) if bars else ("TV" if technicals else "0")
         print(
-            f"{ticker:<11}{bars:>7}  {len(fundamentals):>6}  "
+            f"{ticker:<11}{sessions:>7}  {len(fundamentals):>6}  "
             f"{(entry.get('name') or '')[:29]:<30}{status}"
         )
 
     print()
+    for note in provider.diagnostics():
+        print(f"Uwaga: {note}")
     if failures:
         print(f"{failures} tickerów nie rozwiązało się — popraw je w pliku uniwersum.")
         return 1
@@ -281,16 +287,22 @@ def _cmd_show(args, config, provider) -> int:
     ticker = args.ticker
     lookback = int(config.get("lookback_days", 420))
 
-    prices = provider.get_prices(ticker, lookback)
-    if prices is None or prices.empty:
-        print(f"Brak danych cenowych dla {ticker}.", file=sys.stderr)
-        return 1
-
     benchmark_symbol = benchmark_for(ticker, config)
-    benchmark = provider.get_prices(benchmark_symbol, lookback) if benchmark_symbol else None
-    benchmark_close = benchmark["close"] if benchmark is not None and not benchmark.empty else None
+    provider.prefetch([ticker, *([benchmark_symbol] if benchmark_symbol else [])])
 
-    technical = compute_technical_metrics(prices, benchmark_close)
+    prices = provider.get_prices(ticker, lookback)
+    if prices is not None and not prices.empty:
+        benchmark = provider.get_prices(benchmark_symbol, lookback) if benchmark_symbol else None
+        benchmark_close = benchmark["close"] if benchmark is not None and not benchmark.empty else None
+        technical = compute_technical_metrics(prices, benchmark_close)
+    else:
+        technical = provider.get_technicals(ticker)
+        if not technical:
+            print(f"Brak danych cenowych dla {ticker}.", file=sys.stderr)
+            return 1
+        index = provider.get_technicals(benchmark_symbol) if benchmark_symbol else None
+        technical.update(relative_strength_from_metrics(technical, index))
+
     fundamental = compute_fundamental_metrics(provider.get_fundamentals(ticker))
 
     # The pipeline converts market cap to USD for the whole universe; a single
@@ -302,7 +314,8 @@ def _cmd_show(args, config, provider) -> int:
     print(f"\n{fundamental.get('name') or ticker}  ({ticker})")
     print(f"{fundamental.get('sector') or '?'} · {fundamental.get('industry') or '?'} · "
           f"waluta {fundamental.get('currency') or '?'} · benchmark {benchmark_symbol or '—'}")
-    print(f"Sesje w oknie: {technical.get('bars', 0)}  |  Ostatni kurs: {fmt.num(technical.get('last_close'), 2)}")
+    print(f"Sesje w oknie: {technical.get('bars') or '— (wskaźniki z TradingView)'}  |  "
+          f"Ostatni kurs: {fmt.num(technical.get('last_close'), 2)}")
 
     _print_block("FUNDAMENTY", fundamental, FUNDAMENTAL_VIEW)
     _print_block("TECHNIKA", technical, TECHNICAL_VIEW)

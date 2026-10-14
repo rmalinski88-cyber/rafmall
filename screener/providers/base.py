@@ -81,5 +81,28 @@ class DataProvider(ABC):
         "cannot compare across currencies" rather than as 1.0.
         """
 
+    # -- optional hooks ------------------------------------------------
+    #
+    # A provider that can answer for many symbols in one request (the
+    # TradingView screener) overrides these; price-history providers leave
+    # the defaults, and the pipeline works either way.
+
+    def prefetch(self, tickers: list[str]) -> None:
+        """Warm up for ``tickers`` (and benchmark symbols) in one go."""
+
+    def get_technicals(self, ticker: str) -> dict | None:
+        """Technical metrics already computed by the source, keyed like
+        ``analysis.technical.compute_technical_metrics`` output.
+
+        ``None`` means "compute them from ``get_prices`` instead".  A source
+        without price history returns these so the pipeline still has a
+        technical score; the report then has no sparklines, which it says.
+        """
+        return None
+
+    def diagnostics(self) -> list[str]:
+        """Human-readable notes about this run (dropped fields, missing symbols)."""
+        return []
+
     def close(self) -> None:  # pragma: no cover - providers may not need it
         """Release any held resources."""

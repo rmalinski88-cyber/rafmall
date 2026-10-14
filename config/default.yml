@@ -3,7 +3,10 @@
 # Wszystkie wagi są względne: liczy się ich stosunek, nie suma.
 # Kierunek "high" = wyższa wartość jest lepsza, "low" = niższa jest lepsza.
 
-provider: yahoo
+# Źródło danych: tradingview (domyślne, publiczny endpoint skanera, bez logowania,
+# fundamenty + wskaźniki techniczne w jednym zapytaniu) | yahoo (historia kursów,
+# wskaźniki liczone lokalnie, są wykresy kursów) | fixture (dane syntetyczne, offline)
+provider: tradingview
 universe: data/universe_humanoid_asia.csv
 
 # ~420 dni sesyjnych z zapasem, żeby SMA200 i zwroty 12M miały pełne okno.

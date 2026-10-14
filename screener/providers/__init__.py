@@ -9,6 +9,7 @@ from __future__ import annotations
 from .base import DataProvider, ProviderError
 
 _REGISTRY = {
+    "tradingview": "screener.providers.tradingview:TradingViewProvider",
     "yahoo": "screener.providers.yahoo:YahooProvider",
     "fixture": "screener.providers.fixture:FixtureProvider",
     "samples": "screener.providers.samples:SamplesProvider",

@@ -14,6 +14,9 @@
 - Reguła `pullback` dostrojona na prawdziwych świecach ARB (`data/samples/ARB11841-USD.csv`): odpala 2026-08-26
   (impuls 19 sie), test `tests/test_market_samples.py`; replay pokazuje jeden sygnał na impuls jak skaner.
 - `data/trump.csv`: 15 z 37 spółek Trump Portfolio Trackera (reszta po podglądzie zakładek na rafmall.ch/portfel).
+- Dostawca TradingView (`screener/providers/tradingview.py`): domyślne źródło; fundamenty + wskaźniki
+  w jednym zapytaniu, mapowanie tickerów na giełdy, FX, samonaprawa przy odrzuconym polu.
+  Nazwy pól TradingView zweryfikowane dopiero przez przebieg GitHub Actions (stąd sieć zablokowana).
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego
