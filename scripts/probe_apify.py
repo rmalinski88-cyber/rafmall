@@ -74,22 +74,40 @@ def search(phrase: str, limit: int = 8) -> None:
 
 def test(actor_id: str, raw_input: str) -> None:
     payload = json.loads(raw_input or "{}")
+    headers = {"Authorization": f"Bearer {_token()}"}
     response = requests.post(
-        f"{API}/acts/{actor_id}/run-sync-get-dataset-items",
-        params={"maxItems": MAX_ITEMS, "maxTotalChargeUsd": MAX_CHARGE_USD, "timeout": TIMEOUT},
-        headers={"Authorization": f"Bearer {_token()}"}, json=payload, timeout=TIMEOUT + 30,
+        f"{API}/acts/{actor_id}/runs",
+        params={"waitForFinish": TIMEOUT, "maxItems": MAX_ITEMS, "maxTotalChargeUsd": MAX_CHARGE_USD},
+        headers=headers, json=payload, timeout=TIMEOUT + 30,
     )
     print(f"{actor_id}: HTTP {response.status_code}, limit {MAX_ITEMS} rekordów / {MAX_CHARGE_USD} USD")
-    try:
-        items = response.json()
-    except ValueError:
+    if response.status_code >= 400:
         print(response.text[:2000])
         return
-    if not isinstance(items, list):
-        print(json.dumps(items, ensure_ascii=False, indent=1)[:3000])
-        return
-    for item in items[:MAX_ITEMS]:
-        print(json.dumps(item, ensure_ascii=False)[:1500])
+    run = response.json().get("data", {})
+    usage = run.get("usageTotalUsd")
+    print(f"przebieg {run.get('id')}: {run.get('status')}"
+          + (f", koszt {usage:.4f} USD" if isinstance(usage, (int, float)) else ""))
+    if run.get("status") != "SUCCEEDED":
+        print("--- log aktora (koniec) ---")
+        print(_run_log(run.get("id")))
+    items = requests.get(f"{API}/datasets/{run.get('defaultDatasetId')}/items",
+                         params={"limit": MAX_ITEMS, "clean": "true"}, headers=headers, timeout=60)
+    try:
+        rows = items.json()
+    except ValueError:
+        rows = []
+    print(f"--- rekordy: {len(rows) if isinstance(rows, list) else '?'} ---")
+    for item in (rows if isinstance(rows, list) else [])[:MAX_ITEMS]:
+        print(json.dumps(item, ensure_ascii=False)[:3000])
+
+
+def _run_log(run_id: str | None, lines: int = 60) -> str:
+    if not run_id:
+        return "(brak id przebiegu)"
+    response = requests.get(f"{API}/actor-runs/{run_id}/log",
+                            headers={"Authorization": f"Bearer {_token()}"}, timeout=60)
+    return "\n".join(response.text.splitlines()[-lines:])
 
 
 if __name__ == "__main__":
