@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, trela_cele, apify_szukaj, apify_test, probe, site, peek, dump]
+        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, trela_cele, apify_szukaj, apify_test, apify_test_bez_limitu, probe, site, peek, dump]
       url:
         description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
@@ -135,6 +135,7 @@ jobs:
               else python scripts/probe_apify.py szukaj; fi
               ;;
             apify_test) python scripts/probe_apify.py test "${APIFY_ARG%%|*}" "${APIFY_ARG#*|}" ;;
+            apify_test_bez_limitu) APIFY_NO_CAPS=1 python scripts/probe_apify.py test "${APIFY_ARG%%|*}" "${APIFY_ARG#*|}" ;;
             # Tylko zapis dzisiejszych celów analityków (rynek USA + lista humanoidów) do .cache.
             trela_cele) python -m screener trela --tylko-cele ;;
             # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').

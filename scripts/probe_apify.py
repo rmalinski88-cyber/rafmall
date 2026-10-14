@@ -26,6 +26,9 @@ import requests
 API = "https://api.apify.com/v2"
 MAX_ITEMS = 20
 MAX_CHARGE_USD = 0.50
+# APIFY_NO_CAPS=1 starts the run without maxItems / maxTotalChargeUsd: some pay-per-event
+# actors fail to write their dataset under those caps (14 Oct 2026, investing.com targets).
+NO_CAPS = os.environ.get("APIFY_NO_CAPS") == "1"
 TIMEOUT = 180
 
 
@@ -77,10 +80,12 @@ def test(actor_id: str, raw_input: str) -> None:
     headers = {"Authorization": f"Bearer {_token()}"}
     response = requests.post(
         f"{API}/acts/{actor_id}/runs",
-        params={"waitForFinish": TIMEOUT, "maxItems": MAX_ITEMS, "maxTotalChargeUsd": MAX_CHARGE_USD},
+        params={"waitForFinish": TIMEOUT} if NO_CAPS else
+               {"waitForFinish": TIMEOUT, "maxItems": MAX_ITEMS, "maxTotalChargeUsd": MAX_CHARGE_USD},
         headers=headers, json=payload, timeout=TIMEOUT + 30,
     )
-    print(f"{actor_id}: HTTP {response.status_code}, limit {MAX_ITEMS} rekordów / {MAX_CHARGE_USD} USD")
+    print(f"{actor_id}: HTTP {response.status_code}, "
+          + ("bez limitów" if NO_CAPS else f"limit {MAX_ITEMS} rekordów / {MAX_CHARGE_USD} USD"))
     if response.status_code >= 400:
         print(response.text[:2000])
         return
