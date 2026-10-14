@@ -10,7 +10,7 @@ on:
         description: "Co uruchomić"
         type: choice
         default: check
-        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, trela_cele, probe, site, peek, dump]
+        options: [check, first_run, alerts, market, scan, screener, trela, trela_lista, trela_cele, apify_szukaj, apify_test, probe, site, peek, dump]
       url:
         description: "Adresy stron dla zadania peek (po przecinku)"
         type: string
@@ -21,6 +21,10 @@ on:
         default: "ARB-USD NVDA"
       klik:
         description: "peek: teksty przycisków/zakładek do kliknięcia (rozdzielone |)"
+        type: string
+        default: ""
+      apify:
+        description: "apify_szukaj: frazy (rozdzielone |); apify_test: autor~aktor|{wejście JSON}"
         type: string
         default: ""
   schedule:
@@ -51,6 +55,7 @@ jobs:
       SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
       QUIVER_API_KEY: ${{ secrets.QUIVER_API_KEY }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
       FTP_HOST: ${{ secrets.FTP_HOST }}
       FTP_USER: ${{ secrets.FTP_USER }}
       FTP_PASS: ${{ secrets.FTP_PASS }}
@@ -60,6 +65,7 @@ jobs:
       PEEK_URL: ${{ inputs.url }}
       DUMP_SYMBOLS: ${{ inputs.symbole }}
       PEEK_CLICKS: ${{ inputs.klik }}
+      APIFY_ARG: ${{ inputs.apify }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -122,6 +128,12 @@ jobs:
               python -m screener --universe data/universe_humanoid_global.csv trela --discord
               echo "=== TRELA CSV ==="; cat out/trela_*.csv; echo "=== KONIEC CSV ==="
               ;;
+            # Apify (sekret APIFY_TOKEN): szukanie aktorów za darmo, test jednego aktora z limitem 0,50 USD.
+            apify_szukaj)
+              if [ -n "$APIFY_ARG" ]; then IFS='|' read -ra F <<< "$APIFY_ARG"; python scripts/probe_apify.py szukaj "${F[@]}"
+              else python scripts/probe_apify.py szukaj; fi
+              ;;
+            apify_test) python scripts/probe_apify.py test "${APIFY_ARG%%|*}" "${APIFY_ARG#*|}" ;;
             # Tylko zapis dzisiejszych celów analityków (rynek USA + lista humanoidów) do .cache.
             trela_cele) python -m screener trela --tylko-cele ;;
             # Co Yahoo zwraca dla danych modelu Treli (symbole z pola 'symbole').

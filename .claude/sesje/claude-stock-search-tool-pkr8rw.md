@@ -31,7 +31,9 @@
 - Azja w modelu Treli: cele analityków z TradingView (`screener/trela/targets.py`, pola `price_target_*` —
   nazwy niepotwierdzone, provider odrzuca nieznane i zgłasza), historia w `.cache/trela_cele.csv` (cache Actions),
   zadanie `trela_cele` w dni robocze 9:23 UTC, `trela_lista` 7. dnia miesiąca. Linki TradingView w raportach
-  (`tradingview_url` w `screener/providers/tradingview.py`). Apify: nie podpięte (koszt — decyzja użytkownika).
+  (`tradingview_url` w `screener/providers/tradingview.py`). Apify: `scripts/probe_apify.py` + zadania
+  `apify_szukaj` (darmowe: sklep, cenniki, schematy wejścia) i `apify_test` (limit 20 rekordów / 0,50 USD);
+  czeka na sekret `APIFY_TOKEN` od użytkownika (14.10 zalogował się do Apify).
 
 ## Następny krok
 - Użytkownik: włączyć GitHub Pages (Settings → Pages → Deploy from a branch → `gh-pages` / root) — bez tego
