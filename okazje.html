@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Okazje — anomalie i setupy</title>
+<meta name="description" content="Wyszukiwarka akcji, ETF i krypto, okazje handlowe (skoki wolumenu, setupy) i ruchy dużych inwestorów. Dane odświeżane automatycznie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokeny skopiowane z rafmall.ch (Lovable), żeby narzędzie wyglądało jak część serwisu. */
+  :root {
+    color-scheme: dark;
+    --background: oklch(18% .025 250); --foreground: oklch(96% .005 250);
+    --primary: oklch(55% .13 255); --primary-fg: oklch(98% .005 250);
+    --secondary: oklch(28% .03 250); --muted: oklch(26% .025 250); --muted-fg: oklch(70% .02 250);
+    --accent: oklch(78% .14 75); --card: oklch(22% .028 250); --border: oklch(32% .025 250);
+    --good: oklch(72% .17 150); --bad: oklch(66% .2 25); --warn: oklch(78% .14 75);
+    --radius: .625rem; --font: "Inter", "Segoe UI", system-ui, sans-serif; --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
+  header.top { display: flex; align-items: center; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; flex-wrap: wrap; }
+  header.top .brand { font-family: var(--font-head); font-weight: 700; color: var(--accent); font-size: 1.05rem; }
+  header.top nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: .92rem; }
+  header.top nav a { color: var(--muted-fg); } header.top nav a.on, header.top nav a:hover { color: var(--foreground); text-decoration: none; }
+  header.top .stamp { margin-left: auto; color: var(--muted-fg); font-size: .82rem; }
+  h1 { font-family: var(--font-head); font-size: 2rem; margin: 0 0 6px; letter-spacing: -.01em; } h1 em { color: var(--accent); font-style: normal; }
+  h2 { font-family: var(--font-head); font-size: 1.25rem; margin: 0 0 4px; } h3 { font-size: 1rem; margin: 18px 0 8px; }
+  p.lead { color: var(--muted-fg); max-width: 760px; margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .tile .k { font-size: .75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .05em; }
+  .tile .v { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; } .tile .s { font-size: .8rem; color: var(--muted-fg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 0 0 20px; }
+  .card .note { color: var(--muted-fg); font-size: .85rem; margin: 0 0 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted-fg); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--card); }
+  th.l, td.l { text-align: left; } td.wrap { white-space: normal; min-width: 240px; text-align: left; color: var(--muted-fg); font-size: .8rem; }
+  tbody tr:hover { background: var(--secondary); } tr[hidden] { display: none; }
+  .sym { font-weight: 600; } .sub { color: var(--muted-fg); font-size: .78rem; font-weight: 400; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .neutral { color: var(--muted-fg); }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .72rem; border: 1px solid var(--border); color: var(--muted-fg); margin-right: 4px; }
+  .pill.acc { border-color: var(--accent); color: var(--accent); } .pill.bad { border-color: var(--bad); color: var(--bad); } .pill.good { border-color: var(--good); color: var(--good); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 16px; }
+  .controls input, .controls select { font: inherit; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--secondary); color: var(--foreground); min-width: 220px; }
+  .chip { font: inherit; font-size: .8rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted-fg); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+  .alert-row td.head { text-align: left; } .icon { width: 1.4em; display: inline-block; }
+  .empty { color: var(--muted-fg); font-style: italic; }
+  .btn { display: inline-block; padding: 9px 14px; border-radius: var(--radius); background: var(--accent); color: #111; font-weight: 600; font-size: .9rem; } .btn:hover { text-decoration: none; filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
+  footer { color: var(--muted-fg); font-size: .8rem; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 32px; }
+  svg.spark polyline { stroke: var(--accent); } svg.spark circle { fill: var(--accent); }
+  @media (max-width: 640px) { h1 { font-size: 1.5rem; } header.top .stamp { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="https://rafmall.ch">rafmall.ch</a>
+    <nav>
+      <a href="index.html" >Narzędzie</a>
+      <a href="szukaj.html" >Szukaj</a>
+      <a href="okazje.html" class="on">Okazje</a>
+      <a href="inwestorzy.html">Inwestorzy</a>
+      <a href="roboty.html">Robotyka</a>
+      <a href="https://rafmall.ch/portfel">Portfel Trumpa ↗</a>
+    </nav>
+    <span class="stamp">dane z 2026-10-17</span>
+  </header>
+  
+<h1>Okazje. <em>Co dziś odstaje.</em></h1>
+<p class="lead">Reguły liczone na 141 śledzonych instrumentach i na całym rynku USA + krypto. Alerty są bilansem liczb, nie opinią: skok wolumenu, ruch większy niż zwykła zmienność, wybicie, przebicie poziomu, kilka sygnałów naraz.</p>
+<div class="tiles">
+  <div class="tile"><div class="k">Alerty</div><div class="v">34</div><div class="s">na listach</div></div>
+  <div class="tile"><div class="k">Konfluencje</div><div class="v">3</div><div class="s">≥ 2 sygnały naraz</div></div>
+  <div class="tile"><div class="k">Setupy</div><div class="v">1</div><div class="s">cały rynek</div></div>
+</div>
+<section class="card">
+  <h2>🎯 Setupy na całym rynku</h2>
+  <p class="note">Kandydaci ze screenera TradingView (wolumen ≥ 2×, kurs nad EMA30), potwierdzeni na danych dziennych: impuls → korekta do EMA30 → pierwsza świeca w górę. Jeden sygnał na setup.</p>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th>Kurs</th><th>Obrót/dzień</th><th class="l">Sygnał</th><th class="l">Szczegóły</th></tr></thead><tbody>
+    <tr><td class="l sym">SARK</td><td class="l">Tradr 1X Short Innovation Daily ETF</td><td>25,76</td><td>3,2 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.5×</td><td class="wrap">przebicie 2026-10-14; kurs 25.76, EMA 24.43 (+5.5%); ruch od przebicia +6.5%</td></tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔥</span>Konfluencja — kilka sygnałów naraz <span class="sub">(3)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NBIS</td><td class="l">Nebius Group N.V.</td><td class="l">KONFLUENCJA: okazja, trend</td><td class="wrap">przebicie SMA200 w dół | okazja zakupowa wg Twoich progów</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">KONFLUENCJA: okazja, poziom</td><td class="wrap">przebicie wsparcia 887.47 w dół | okazja zakupowa wg Twoich progów</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">RBOT</td><td class="l">Vicarious Surgical Inc.</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 0.02 w dół</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🟢</span>Okazje zakupowe (Twoje progi) <span class="sub">(5)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NBIS</td><td class="l">Nebius Group N.V.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">42% poniżej szczytu 52T (próg 25%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">TSLA</td><td class="l">Tesla, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">28% poniżej szczytu 52T (próg 25%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">28% poniżej szczytu 52T (próg 20%)</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">KOID</td><td class="l">KraneShares Global Humanoid Rob</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">25% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">ASML</td><td class="l">ASML Holding N.V. - New York Re</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">17% poniżej szczytu 52T (próg 15%)</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🚀</span>Szczyt / dołek 52 tygodni <span class="sub">(8)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">12.30 &lt; 12.32</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">7267.T</td><td class="l">HONDA MOTOR CO</td><td class="l">nowy szczyt 52 tygodni</td><td class="wrap">1797.50 &gt; 1776.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AAPL</td><td class="l">Apple Inc.</td><td class="l">nowy szczyt 52 tygodni</td><td class="wrap">343.46 &gt; 342.96</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">DBC</td><td class="l">Invesco DB Commodity Index Trac</td><td class="l">nowy szczyt 52 tygodni</td><td class="wrap">33.74 &gt; 33.68</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">HUMN</td><td class="l">Roundhill Humanoid Robotics ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">25.67 &lt; 26.15</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">RBOT</td><td class="l">Vicarious Surgical Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">0.02 &lt; 0.03</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">REMX</td><td class="l">VanEck Rare Earth and Strategic</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">54.23 &lt; 55.74</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">URA</td><td class="l">Global X Uranium ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">35.43 &lt; 35.54</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔑</span>Przebicie poziomu <span class="sub">(13)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">przebicie wsparcia 887.47 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 878.84</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">AMAT</td><td class="l">Applied Materials, Inc.</td><td class="l">przebicie wsparcia 411.51 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 409.29</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AVGO</td><td class="l">Broadcom Inc.</td><td class="l">przebicie wsparcia 335.20 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 328.75</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">BOTZ</td><td class="l">Global X Robotics &amp; Artificial </td><td class="l">przebicie wsparcia 33.48 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 33.02</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CIBR</td><td class="l">First Trust NASDAQ Cybersecurit</td><td class="l">przebicie wsparcia 99.15 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 98.82</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GEV</td><td class="l">GE Vernova Inc.</td><td class="l">przebicie wsparcia 921.53 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 921.20</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">KLAC</td><td class="l">KLA Corporation</td><td class="l">przebicie wsparcia 165.89 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 165.74</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">LRCX</td><td class="l">Lam Research Corporation</td><td class="l">przebicie wsparcia 265.09 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 263.94</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">META</td><td class="l">Meta Platforms, Inc.</td><td class="l">przebicie wsparcia 711.68 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 709.33</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">OUST</td><td class="l">Ouster, Inc.</td><td class="l">przebicie wsparcia 30.82 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 28.43</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">RBOT</td><td class="l">Vicarious Surgical Inc.</td><td class="l">przebicie wsparcia 0.02 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 0.02</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SMH</td><td class="l">VanEck Semiconductor ETF</td><td class="l">przebicie wsparcia 540.07 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 539.79</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">TER</td><td class="l">Teradyne, Inc.</td><td class="l">przebicie wsparcia 325.87 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 325.00</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">📈</span>Przecięcie SMA200 <span class="sub">(5)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NBIS</td><td class="l">Nebius Group N.V.</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 165.47, średnia 174.04</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">AEM</td><td class="l">Agnico Eagle Mines Limited</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 189.53, średnia 188.92</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ETN</td><td class="l">Eaton Corporation, PLC</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 391.25, średnia 392.76</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ROK</td><td class="l">Rockwell Automation, Inc.</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 426.23, średnia 423.91</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">WPM</td><td class="l">Wheaton Precious Metals Corp</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 134.18, średnia 133.51</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+
+  <footer>
+    Dane: Yahoo Finance (opóźnienie ok. 15 min), SEC EDGAR, screener TradingView. Odświeżane automatycznie przez GitHub Actions.
+    Informacja, nie porada inwestycyjna — decyzje podejmujesz na własną odpowiedzialność.
+  </footer>
+</div>
+
+</body>
+</html>
