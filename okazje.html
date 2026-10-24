@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Okazje — anomalie i setupy</title>
+<meta name="description" content="Wyszukiwarka akcji, ETF i krypto, okazje handlowe (skoki wolumenu, setupy) i ruchy dużych inwestorów. Dane odświeżane automatycznie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokeny skopiowane z rafmall.ch (Lovable), żeby narzędzie wyglądało jak część serwisu. */
+  :root {
+    color-scheme: dark;
+    --background: oklch(18% .025 250); --foreground: oklch(96% .005 250);
+    --primary: oklch(55% .13 255); --primary-fg: oklch(98% .005 250);
+    --secondary: oklch(28% .03 250); --muted: oklch(26% .025 250); --muted-fg: oklch(70% .02 250);
+    --accent: oklch(78% .14 75); --card: oklch(22% .028 250); --border: oklch(32% .025 250);
+    --good: oklch(72% .17 150); --bad: oklch(66% .2 25); --warn: oklch(78% .14 75);
+    --radius: .625rem; --font: "Inter", "Segoe UI", system-ui, sans-serif; --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
+  header.top { display: flex; align-items: center; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; flex-wrap: wrap; }
+  header.top .brand { font-family: var(--font-head); font-weight: 700; color: var(--accent); font-size: 1.05rem; }
+  header.top nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: .92rem; }
+  header.top nav a { color: var(--muted-fg); } header.top nav a.on, header.top nav a:hover { color: var(--foreground); text-decoration: none; }
+  header.top .stamp { margin-left: auto; color: var(--muted-fg); font-size: .82rem; }
+  h1 { font-family: var(--font-head); font-size: 2rem; margin: 0 0 6px; letter-spacing: -.01em; } h1 em { color: var(--accent); font-style: normal; }
+  h2 { font-family: var(--font-head); font-size: 1.25rem; margin: 0 0 4px; } h3 { font-size: 1rem; margin: 18px 0 8px; }
+  p.lead { color: var(--muted-fg); max-width: 760px; margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .tile .k { font-size: .75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .05em; }
+  .tile .v { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; } .tile .s { font-size: .8rem; color: var(--muted-fg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 0 0 20px; }
+  .card .note { color: var(--muted-fg); font-size: .85rem; margin: 0 0 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted-fg); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--card); }
+  th.l, td.l { text-align: left; } td.wrap { white-space: normal; min-width: 240px; text-align: left; color: var(--muted-fg); font-size: .8rem; }
+  tbody tr:hover { background: var(--secondary); } tr[hidden] { display: none; }
+  .sym { font-weight: 600; } .sub { color: var(--muted-fg); font-size: .78rem; font-weight: 400; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .neutral { color: var(--muted-fg); }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .72rem; border: 1px solid var(--border); color: var(--muted-fg); margin-right: 4px; }
+  .pill.acc { border-color: var(--accent); color: var(--accent); } .pill.bad { border-color: var(--bad); color: var(--bad); } .pill.good { border-color: var(--good); color: var(--good); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 16px; }
+  .controls input, .controls select { font: inherit; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--secondary); color: var(--foreground); min-width: 220px; }
+  .chip { font: inherit; font-size: .8rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted-fg); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+  .alert-row td.head { text-align: left; } .icon { width: 1.4em; display: inline-block; }
+  .empty { color: var(--muted-fg); font-style: italic; }
+  .btn { display: inline-block; padding: 9px 14px; border-radius: var(--radius); background: var(--accent); color: #111; font-weight: 600; font-size: .9rem; } .btn:hover { text-decoration: none; filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
+  footer { color: var(--muted-fg); font-size: .8rem; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 32px; }
+  svg.spark polyline { stroke: var(--accent); } svg.spark circle { fill: var(--accent); }
+  @media (max-width: 640px) { h1 { font-size: 1.5rem; } header.top .stamp { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="https://rafmall.ch">rafmall.ch</a>
+    <nav>
+      <a href="index.html" >Narzędzie</a>
+      <a href="szukaj.html" >Szukaj</a>
+      <a href="okazje.html" class="on">Okazje</a>
+      <a href="inwestorzy.html">Inwestorzy</a>
+      <a href="roboty.html">Robotyka</a>
+      <a href="https://rafmall.ch/portfel">Portfel Trumpa ↗</a>
+    </nav>
+    <span class="stamp">dane z 2026-10-24</span>
+  </header>
+  
+<h1>Okazje. <em>Co dziś odstaje.</em></h1>
+<p class="lead">Reguły liczone na 141 śledzonych instrumentach i na całym rynku USA + krypto. Alerty są bilansem liczb, nie opinią: skok wolumenu, ruch większy niż zwykła zmienność, wybicie, przebicie poziomu, kilka sygnałów naraz.</p>
+<div class="tiles">
+  <div class="tile"><div class="k">Alerty</div><div class="v">47</div><div class="s">na listach</div></div>
+  <div class="tile"><div class="k">Konfluencje</div><div class="v">6</div><div class="s">≥ 2 sygnały naraz</div></div>
+  <div class="tile"><div class="k">Setupy</div><div class="v">9</div><div class="s">cały rynek</div></div>
+</div>
+<section class="card">
+  <h2>🎯 Setupy na całym rynku</h2>
+  <p class="note">Kandydaci ze screenera TradingView (wolumen ≥ 2×, kurs nad EMA30), potwierdzeni na danych dziennych: impuls → korekta do EMA30 → pierwsza świeca w górę. Jeden sygnał na setup.</p>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th>Kurs</th><th>Obrót/dzień</th><th class="l">Sygnał</th><th class="l">Szczegóły</th></tr></thead><tbody>
+    <tr><td class="l sym">MFSB</td><td class="l">MFS Active Core Plus Bond ETF</td><td>24,19</td><td>12,6 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 6.2×</td><td class="wrap">przebicie 2026-10-21; kurs 24.19, EMA 24.06 (+0.6%); ruch od przebicia +0.7%</td></tr><tr><td class="l sym">CCI</td><td class="l">Crown Castle Inc.</td><td>85,97</td><td>440,8 mln USD</td><td class="l">wejście po korekcie do EMA30: impuls 2026-10-09 (3.8× wol.)</td><td class="wrap">kurs 85.97, EMA 75.96 (+13.2%); najniżej w korekcie +1.4% od EMA; wolumen korekty 74% impulsu</td></tr><tr><td class="l sym">AMT</td><td class="l">American Tower Corporation</td><td>188,97</td><td>625,5 mln USD</td><td class="l">wejście po korekcie do EMA30: impuls 2026-10-09 (3.0× wol.)</td><td class="wrap">kurs 189, EMA 175.8 (+7.5%); najniżej w korekcie +1.3% od EMA; wolumen korekty 81% impulsu</td></tr><tr><td class="l sym">BOLT</td><td class="l">Bolt Biotherapeutics, Inc.</td><td>6,27</td><td>4,1 mln USD</td><td class="l">wejście po korekcie do EMA30: impuls 2026-10-09 (2.4× wol.)</td><td class="wrap">kurs 6.27, EMA 4.051 (+54.8%); najniżej w korekcie +3.3% od EMA; wolumen korekty 84% impulsu</td></tr><tr><td class="l sym">OSUR</td><td class="l">OraSure Technologies, Inc.</td><td>4,13</td><td>2,1 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.2×</td><td class="wrap">przebicie 2026-10-21; kurs 4.13, EMA 3.80 (+8.6%); ruch od przebicia +10.1%</td></tr><tr><td class="l sym">BMO</td><td class="l">Bank of Montreal</td><td>169,11</td><td>108,5 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.7×</td><td class="wrap">przebicie 2026-10-21; kurs 169.11, EMA 168.58 (+0.3%); ruch od przebicia +1.0%</td></tr><tr><td class="l sym">COLB</td><td class="l">Columbia Banking System, Inc.</td><td>30,86</td><td>81,3 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.1×</td><td class="wrap">przebicie 2026-10-21; kurs 30.86, EMA 29.23 (+5.6%); ruch od przebicia +6.5%</td></tr><tr><td class="l sym">MSBI</td><td class="l">Midland States Bancorp, Inc.</td><td>32,98</td><td>5,1 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.2×</td><td class="wrap">przebicie 2026-10-21; kurs 32.98, EMA 32.63 (+1.1%); ruch od przebicia +1.3%</td></tr><tr><td class="l sym">JSCP</td><td class="l">JPMorgan Short Duration Core Plus ETF</td><td>46,22</td><td>11,8 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.1×</td><td class="wrap">przebicie 2026-10-21; kurs 46.22, EMA 46.10 (+0.3%); ruch od przebicia +0.3%</td></tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔥</span>Konfluencja — kilka sygnałów naraz <span class="sub">(6)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">300660.SZ</td><td class="l">JIANGSU LEILI</td><td class="l">KONFLUENCJA: poziom, wolumen</td><td class="wrap">wolumen 5.2× średniej | przebicie oporu 25.62 w górę</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">KONFLUENCJA: poziom, wolumen</td><td class="wrap">wolumen 3.4× średniej | przebicie oporu 13.38 w górę</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">002472.SZ</td><td class="l">SHUANGHUAN COMPANY</td><td class="l">KONFLUENCJA: poziom, trend</td><td class="wrap">przebicie SMA200 w górę | przebicie oporu 39.83 w górę</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">DBC</td><td class="l">Invesco DB Commodity Index Trac</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy szczyt 52 tygodni | przebicie oporu 33.78 w górę</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NEM</td><td class="l">Newmont Corporation</td><td class="l">KONFLUENCJA: poziom, trend</td><td class="wrap">przebicie SMA200 w dół | przebicie wsparcia 109.84 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NRG</td><td class="l">NRG Energy, Inc.</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 93.36 w dół</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🟢</span>Okazje zakupowe (Twoje progi) <span class="sub">(5)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NBIS</td><td class="l">Nebius Group N.V.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">45% poniżej szczytu 52T (próg 25%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">28% poniżej szczytu 52T (próg 20%)</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">TSLA</td><td class="l">Tesla, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">KOID</td><td class="l">KraneShares Global Humanoid Rob</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">23% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">ASML</td><td class="l">ASML Holding N.V. - New York Re</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">21% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">📊</span>Skok wolumenu <span class="sub">(3)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">300660.SZ</td><td class="l">JIANGSU LEILI</td><td class="l">wolumen 5.2× średniej</td><td class="wrap">28 528 739 wobec śr. 20 sesji 5 466 556; kurs +6.5%</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">wolumen 3.4× średniej</td><td class="wrap">55 300 375 wobec śr. 20 sesji 16 382 082; kurs +6.4%</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">1211.HK</td><td class="l">BYD COMPANY</td><td class="l">wolumen 3.0× średniej</td><td class="wrap">51 810 625 wobec śr. 20 sesji 17 018 329; kurs +6.2%</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🚀</span>Szczyt / dołek 52 tygodni <span class="sub">(6)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">CCJ</td><td class="l">Cameco Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">78.60 &lt; 78.93</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CRWV</td><td class="l">CoreWeave, Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">54.24 &lt; 55.60</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">DBC</td><td class="l">Invesco DB Commodity Index Trac</td><td class="l">nowy szczyt 52 tygodni</td><td class="wrap">34.10 &gt; 33.74</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NRG</td><td class="l">NRG Energy, Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">92.31 &lt; 94.38</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">REMX</td><td class="l">VanEck Rare Earth and Strategic</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">51.46 &lt; 51.60</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SHA0.DE</td><td class="l">Schaeffler AG                 N</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">5.39 &lt; 5.55</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔑</span>Przebicie poziomu <span class="sub">(17)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">002472.SZ</td><td class="l">SHUANGHUAN COMPANY</td><td class="l">przebicie oporu 39.83 w górę</td><td class="wrap">lokalny szczyt z ostatnich 90 sesji; kurs 41.03</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">012330.KS</td><td class="l">Mobis</td><td class="l">przebicie wsparcia 331500.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 328500.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">przebicie oporu 13.38 w górę</td><td class="wrap">lokalny szczyt z ostatnich 90 sesji; kurs 13.71</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300660.SZ</td><td class="l">JIANGSU LEILI</td><td class="l">przebicie oporu 25.62 w górę</td><td class="wrap">lokalny szczyt z ostatnich 90 sesji; kurs 25.83</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6141.T</td><td class="l">DMG MORI CO LTD</td><td class="l">przebicie wsparcia 2668.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 2647.50</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6273.T</td><td class="l">SMC CORP</td><td class="l">przebicie wsparcia 62390.31 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 61820.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6481.T</td><td class="l">THK CO LTD</td><td class="l">przebicie wsparcia 5659.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 5571.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AEM</td><td class="l">Agnico Eagle Mines Limited</td><td class="l">przebicie wsparcia 173.97 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 173.94</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">B</td><td class="l">Barrick Mining Corporation</td><td class="l">przebicie wsparcia 38.36 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 38.14</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">DBC</td><td class="l">Invesco DB Commodity Index Trac</td><td class="l">przebicie oporu 33.78 w górę</td><td class="wrap">lokalny szczyt z ostatnich 90 sesji; kurs 34.10</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GFI</td><td class="l">Gold Fields Limited</td><td class="l">przebicie wsparcia 34.80 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 34.59</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NEM</td><td class="l">Newmont Corporation</td><td class="l">przebicie wsparcia 109.84 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 108.87</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NRG</td><td class="l">NRG Energy, Inc.</td><td class="l">przebicie wsparcia 93.36 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 92.31</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PAAS</td><td class="l">Pan American Silver Corp.</td><td class="l">przebicie wsparcia 40.62 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 40.15</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PHYS</td><td class="l">&#34;Sprott Physical Gold Trust&#34;</td><td class="l">przebicie wsparcia 30.21 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 30.20</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PSLV</td><td class="l">&#34;Sprott Physical Silver Trust&#34;</td><td class="l">przebicie wsparcia 17.50 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 17.37</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">STMPA.PA</td><td class="l">STMICROELECTRONICS</td><td class="l">przebicie wsparcia 39.54 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 39.47</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">📈</span>Przecięcie SMA200 <span class="sub">(10)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">002472.SZ</td><td class="l">SHUANGHUAN COMPANY</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 41.03, średnia 39.71</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">002747.SZ</td><td class="l">ESTUN AUTOMATION</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 29.18, średnia 27.89</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6645.T</td><td class="l">OMRON CORP</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 5330.00, średnia 5378.49</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">688017.SS</td><td class="l">LEADER HARMONIOUS DRIVE SYSTEMS</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 290.00, średnia 273.54</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">7203.T</td><td class="l">TOYOTA MOTOR CORP</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 3105.00, średnia 3098.30</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">FCX</td><td class="l">Freeport-McMoRan, Inc.</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 65.18, średnia 64.75</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">INTC</td><td class="l">Intel Corporation</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 86.96, średnia 85.81</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NEM</td><td class="l">Newmont Corporation</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 108.87, średnia 112.09</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ROK</td><td class="l">Rockwell Automation, Inc.</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 426.11, średnia 424.63</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SCCO</td><td class="l">Southern Copper Corporation</td><td class="l">przebicie SMA200 w górę</td><td class="wrap">kurs 185.01, średnia 184.88</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+
+  <footer>
+    Dane: Yahoo Finance (opóźnienie ok. 15 min), SEC EDGAR, screener TradingView. Odświeżane automatycznie przez GitHub Actions.
+    Informacja, nie porada inwestycyjna — decyzje podejmujesz na własną odpowiedzialność.
+  </footer>
+</div>
+
+</body>
+</html>
