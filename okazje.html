@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Okazje — anomalie i setupy</title>
+<meta name="description" content="Wyszukiwarka akcji, ETF i krypto, okazje handlowe (skoki wolumenu, setupy) i ruchy dużych inwestorów. Dane odświeżane automatycznie.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  /* Tokeny skopiowane z rafmall.ch (Lovable), żeby narzędzie wyglądało jak część serwisu. */
+  :root {
+    color-scheme: dark;
+    --background: oklch(18% .025 250); --foreground: oklch(96% .005 250);
+    --primary: oklch(55% .13 255); --primary-fg: oklch(98% .005 250);
+    --secondary: oklch(28% .03 250); --muted: oklch(26% .025 250); --muted-fg: oklch(70% .02 250);
+    --accent: oklch(78% .14 75); --card: oklch(22% .028 250); --border: oklch(32% .025 250);
+    --good: oklch(72% .17 150); --bad: oklch(66% .2 25); --warn: oklch(78% .14 75);
+    --radius: .625rem; --font: "Inter", "Segoe UI", system-ui, sans-serif; --font-head: "Space Grotesk", "Inter", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+  a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px 64px; }
+  header.top { display: flex; align-items: center; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 28px; flex-wrap: wrap; }
+  header.top .brand { font-family: var(--font-head); font-weight: 700; color: var(--accent); font-size: 1.05rem; }
+  header.top nav { display: flex; gap: 14px; flex-wrap: wrap; font-size: .92rem; }
+  header.top nav a { color: var(--muted-fg); } header.top nav a.on, header.top nav a:hover { color: var(--foreground); text-decoration: none; }
+  header.top .stamp { margin-left: auto; color: var(--muted-fg); font-size: .82rem; }
+  h1 { font-family: var(--font-head); font-size: 2rem; margin: 0 0 6px; letter-spacing: -.01em; } h1 em { color: var(--accent); font-style: normal; }
+  h2 { font-family: var(--font-head); font-size: 1.25rem; margin: 0 0 4px; } h3 { font-size: 1rem; margin: 18px 0 8px; }
+  p.lead { color: var(--muted-fg); max-width: 760px; margin: 0 0 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .tile .k { font-size: .75rem; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .05em; }
+  .tile .v { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; } .tile .s { font-size: .8rem; color: var(--muted-fg); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin: 0 0 20px; }
+  .card .note { color: var(--muted-fg); font-size: .85rem; margin: 0 0 14px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+  th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted-fg); font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; position: sticky; top: 0; background: var(--card); }
+  th.l, td.l { text-align: left; } td.wrap { white-space: normal; min-width: 240px; text-align: left; color: var(--muted-fg); font-size: .8rem; }
+  tbody tr:hover { background: var(--secondary); } tr[hidden] { display: none; }
+  .sym { font-weight: 600; } .sub { color: var(--muted-fg); font-size: .78rem; font-weight: 400; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .neutral { color: var(--muted-fg); }
+  .pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: .72rem; border: 1px solid var(--border); color: var(--muted-fg); margin-right: 4px; }
+  .pill.acc { border-color: var(--accent); color: var(--accent); } .pill.bad { border-color: var(--bad); color: var(--bad); } .pill.good { border-color: var(--good); color: var(--good); }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 16px; }
+  .controls input, .controls select { font: inherit; padding: 9px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--secondary); color: var(--foreground); min-width: 220px; }
+  .chip { font: inherit; font-size: .8rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted-fg); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+  .alert-row td.head { text-align: left; } .icon { width: 1.4em; display: inline-block; }
+  .empty { color: var(--muted-fg); font-style: italic; }
+  .btn { display: inline-block; padding: 9px 14px; border-radius: var(--radius); background: var(--accent); color: #111; font-weight: 600; font-size: .9rem; } .btn:hover { text-decoration: none; filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--foreground); border: 1px solid var(--border); }
+  footer { color: var(--muted-fg); font-size: .8rem; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 32px; }
+  svg.spark polyline { stroke: var(--accent); } svg.spark circle { fill: var(--accent); }
+  @media (max-width: 640px) { h1 { font-size: 1.5rem; } header.top .stamp { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="https://rafmall.ch">rafmall.ch</a>
+    <nav>
+      <a href="index.html" >Narzędzie</a>
+      <a href="szukaj.html" >Szukaj</a>
+      <a href="okazje.html" class="on">Okazje</a>
+      <a href="inwestorzy.html">Inwestorzy</a>
+      <a href="roboty.html">Robotyka</a>
+      <a href="https://rafmall.ch/portfel">Portfel Trumpa ↗</a>
+    </nav>
+    <span class="stamp">dane z 2026-11-21</span>
+  </header>
+  
+<h1>Okazje. <em>Co dziś odstaje.</em></h1>
+<p class="lead">Reguły liczone na 141 śledzonych instrumentach i na całym rynku USA + krypto. Alerty są bilansem liczb, nie opinią: skok wolumenu, ruch większy niż zwykła zmienność, wybicie, przebicie poziomu, kilka sygnałów naraz.</p>
+<div class="tiles">
+  <div class="tile"><div class="k">Alerty</div><div class="v">114</div><div class="s">na listach</div></div>
+  <div class="tile"><div class="k">Konfluencje</div><div class="v">16</div><div class="s">≥ 2 sygnały naraz</div></div>
+  <div class="tile"><div class="k">Setupy</div><div class="v">4</div><div class="s">cały rynek</div></div>
+</div>
+<section class="card">
+  <h2>🎯 Setupy na całym rynku</h2>
+  <p class="note">Kandydaci ze screenera TradingView (wolumen ≥ 2×, kurs nad EMA30), potwierdzeni na danych dziennych: impuls → korekta do EMA30 → pierwsza świeca w górę. Jeden sygnał na setup.</p>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th>Kurs</th><th>Obrót/dzień</th><th class="l">Sygnał</th><th class="l">Szczegóły</th></tr></thead><tbody>
+    <tr><td class="l sym">XFIV</td><td class="l">BondBloxx Bloomberg Five Year Target Duration US Treasury ETF</td><td>47,52</td><td>2,1 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 7.6×</td><td class="wrap">przebicie 2026-11-18; kurs 47.52, EMA 47.13 (+0.8%); ruch od przebicia +1.0%</td></tr><tr><td class="l sym">IBTM</td><td class="l">iShares iBonds Dec 2032 Term Treasury ETF</td><td>22,15</td><td>8,0 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 5.1×</td><td class="wrap">przebicie 2026-11-18; kurs 22.15, EMA 21.97 (+0.8%); ruch od przebicia +1.0%</td></tr><tr><td class="l sym">FAZ</td><td class="l">Direxion Daily Financial Bear 3X ETF</td><td>36,58</td><td>64,4 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 2.1×</td><td class="wrap">przebicie 2026-11-18; kurs 36.58, EMA 33.14 (+10.4%); ruch od przebicia +13.8%</td></tr><tr><td class="l sym">VGIT</td><td class="l">Vanguard Intermediate-Term Treasury ETF</td><td>57,67</td><td>374,6 mln USD</td><td class="l">nad EMA30 od 3 sesji, wolumen 3.0×</td><td class="wrap">przebicie 2026-11-18; kurs 57.67, EMA 57.20 (+0.8%); ruch od przebicia +1.0%</td></tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔥</span>Konfluencja — kilka sygnałów naraz <span class="sub">(16)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NVDA</td><td class="l">NVIDIA Corporation</td><td class="l">KONFLUENCJA: okazja, wybicie</td><td class="wrap">nowy dołek 52 tygodni | okazja zakupowa wg Twoich progów</td>
+      <td class="l"><span class="pill acc">portfel</span><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">KONFLUENCJA: okazja, poziom</td><td class="wrap">przebicie wsparcia 650.00 w dół | okazja zakupowa wg Twoich progów</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">ASML</td><td class="l">ASML Holding N.V. - New York Re</td><td class="l">KONFLUENCJA: okazja, poziom</td><td class="wrap">przebicie wsparcia 1355.05 w dół | okazja zakupowa wg Twoich progów</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">HUMN</td><td class="l">Roundhill Humanoid Robotics ETF</td><td class="l">KONFLUENCJA: wolumen, wybicie</td><td class="wrap">wolumen 4.3× średniej | nowy dołek 52 tygodni</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">0020.HK</td><td class="l">SENSETIME-W</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 1.05 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">056080.KQ</td><td class="l">Yujin Robot</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 7790.00 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 12.17 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">3231.TW</td><td class="l">WISTRON CORPORATION</td><td class="l">KONFLUENCJA: poziom, trend</td><td class="wrap">przebicie SMA200 w dół | przebicie wsparcia 152.00 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6506.T</td><td class="l">YASKAWA ELECTRIC CORP</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 3351.00 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9660.HK</td><td class="l">HORIZONROBOT-W</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 3.38 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9880.HK</td><td class="l">UBTECH ROBOTICS</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 60.20 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AU</td><td class="l">AngloGold Ashanti PLC</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 72.94 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CRWV</td><td class="l">CoreWeave, Inc.</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 40.58 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ETN</td><td class="l">Eaton Corporation, PLC</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 323.28 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GDX</td><td class="l">VanEck Gold Miners ETF</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 69.74 w dół</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ORCL</td><td class="l">Oracle Corporation</td><td class="l">KONFLUENCJA: poziom, wybicie</td><td class="wrap">nowy dołek 52 tygodni | przebicie wsparcia 109.21 w dół</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🟢</span>Okazje zakupowe (Twoje progi) <span class="sub">(7)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NVDA</td><td class="l">NVIDIA Corporation</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">48% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill acc">portfel</span><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">NBIS</td><td class="l">Nebius Group N.V.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">72% poniżej szczytu 52T (próg 25%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">51% poniżej szczytu 52T (próg 20%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">ASML</td><td class="l">ASML Holding N.V. - New York Re</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">36% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">KOID</td><td class="l">KraneShares Global Humanoid Rob</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">34% poniżej szczytu 52T (próg 15%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">TSLA</td><td class="l">Tesla, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">29% poniżej szczytu 52T (próg 25%); poniżej SMA200</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">NTNX</td><td class="l">Nutanix, Inc.</td><td class="l">okazja zakupowa wg Twoich progów</td><td class="wrap">27% poniżej szczytu 52T (próg 20%)</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">📊</span>Skok wolumenu <span class="sub">(2)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">RBOT</td><td class="l">Vicarious Surgical Inc.</td><td class="l">wolumen 33.4× średniej</td><td class="wrap">505 800 wobec śr. 20 sesji 15 135; kurs +0.0%</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">HUMN</td><td class="l">Roundhill Humanoid Robotics ETF</td><td class="l">wolumen 4.3× średniej</td><td class="wrap">267 500 wobec śr. 20 sesji 62 505; kurs -6.7%</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🚀</span>Szczyt / dołek 52 tygodni <span class="sub">(38)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">NVDA</td><td class="l">NVIDIA Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">125.53 &lt; 145.98</td>
+      <td class="l"><span class="pill acc">portfel</span><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">BTC-USD</td><td class="l">Bitcoin USD</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">58177.79 &lt; 58558.86</td>
+      <td class="l"><span class="pill acc">portfel</span></td>
+    </tr><tr>
+      <td class="l sym">0020.HK</td><td class="l">SENSETIME-W</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">1.02 &lt; 1.05</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">056080.KQ</td><td class="l">Yujin Robot</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">7610.00 &lt; 7850.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">1211.HK</td><td class="l">BYD COMPANY</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">62.35 &lt; 63.20</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">11.91 &lt; 12.30</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300660.SZ</td><td class="l">JIANGSU LEILI</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">18.44 &lt; 19.60</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">454910.KS</td><td class="l">Doosan Robotics</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">47500.00 &lt; 48100.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6268.T</td><td class="l">NABTESCO CORP</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">3105.00 &lt; 3165.75</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6506.T</td><td class="l">YASKAWA ELECTRIC CORP</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">3180.00 &lt; 3445.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">7012.T</td><td class="l">KAWASAKI HEAVY INDUSTRIES</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">1529.00 &lt; 1673.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9660.HK</td><td class="l">HORIZONROBOT-W</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">3.12 &lt; 3.39</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9880.HK</td><td class="l">UBTECH ROBOTICS</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">57.90 &lt; 62.10</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AU</td><td class="l">AngloGold Ashanti PLC</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">72.43 &lt; 74.41</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">B</td><td class="l">Barrick Mining Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">31.54 &lt; 33.37</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">BOTZ</td><td class="l">Global X Robotics &amp; Artificial </td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">27.34 &lt; 29.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CCJ</td><td class="l">Cameco Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">58.00 &lt; 61.42</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">COPJ</td><td class="l">Sprott Junior Copper Miners ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">28.65 &lt; 29.88</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CRWV</td><td class="l">CoreWeave, Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">39.51 &lt; 43.66</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ETN</td><td class="l">Eaton Corporation, PLC</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">311.33 &lt; 312.24</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GDX</td><td class="l">VanEck Gold Miners ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">68.40 &lt; 70.74</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GDXJ</td><td class="l">VanEck Junior Gold Miners ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">81.26 &lt; 85.83</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GLD</td><td class="l">SPDR Gold Shares</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">322.87 &lt; 335.18</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GOOGL</td><td class="l">Alphabet Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">265.29 &lt; 272.66</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">HUMN</td><td class="l">Roundhill Humanoid Robotics ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">22.73 &lt; 24.35</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">KGC</td><td class="l">Kinross Gold Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">17.32 &lt; 18.25</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ORCL</td><td class="l">Oracle Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">101.19 &lt; 110.57</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PAAS</td><td class="l">Pan American Silver Corp.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">30.60 &lt; 32.39</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PHYS</td><td class="l">&#34;Sprott Physical Gold Trust&#34;</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">26.55 &lt; 27.51</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PSLV</td><td class="l">&#34;Sprott Physical Silver Trust&#34;</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">13.17 &lt; 14.04</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">QS</td><td class="l">QuantumScape Corporation</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">2.79 &lt; 3.05</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">REMX</td><td class="l">VanEck Rare Earth and Strategic</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">42.06 &lt; 44.32</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SHA0.DE</td><td class="l">Schaeffler AG                 N</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">5.19 &lt; 5.27</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SIL</td><td class="l">Global X Silver Miners ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">60.29 &lt; 63.86</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SOFI</td><td class="l">SoFi Technologies, Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">12.48 &lt; 13.53</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SYM</td><td class="l">Symbotic Inc.</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">31.10 &lt; 33.06</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">URA</td><td class="l">Global X Uranium ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">26.79 &lt; 28.67</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">URNM</td><td class="l">Sprott Uranium Miners ETF</td><td class="l">nowy dołek 52 tygodni</td><td class="wrap">33.61 &lt; 35.96</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">🔑</span>Przebicie poziomu <span class="sub">(47)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">MSFT</td><td class="l">Microsoft Corporation</td><td class="l">przebicie wsparcia 485.06 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 484.52</td>
+      <td class="l"><span class="pill acc">portfel</span></td>
+    </tr><tr>
+      <td class="l sym">ASML</td><td class="l">ASML Holding N.V. - New York Re</td><td class="l">przebicie wsparcia 1355.05 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 1266.22</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">MU</td><td class="l">Micron Technology, Inc.</td><td class="l">przebicie wsparcia 650.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 594.51</td>
+      <td class="l"><span class="pill good">okazje</span></td>
+    </tr><tr>
+      <td class="l sym">0020.HK</td><td class="l">SENSETIME-W</td><td class="l">przebicie wsparcia 1.05 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 1.02</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">002050.SZ</td><td class="l">SANHUA</td><td class="l">przebicie wsparcia 31.96 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 31.40</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">005930.KS</td><td class="l">SamsungElec</td><td class="l">przebicie wsparcia 185975.90 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 183100.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">056080.KQ</td><td class="l">Yujin Robot</td><td class="l">przebicie wsparcia 7790.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 7610.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">1590.TW</td><td class="l">AIRTAC INTERNATIONAL GROUP</td><td class="l">przebicie wsparcia 949.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 938.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">2049.TW</td><td class="l">HIWIN TECHNOLOGIES CORP</td><td class="l">przebicie wsparcia 256.50 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 242.50</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">2317.TW</td><td class="l">HON HAI PRECISION INDUSTRY</td><td class="l">przebicie wsparcia 212.50 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 210.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">2330.TW</td><td class="l">TAIWAN SEMICONDUCTOR MANUFACTUR</td><td class="l">przebicie wsparcia 2020.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 2000.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">300024.SZ</td><td class="l">ROBOT</td><td class="l">przebicie wsparcia 12.17 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 11.91</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">3231.TW</td><td class="l">WISTRON CORPORATION</td><td class="l">przebicie wsparcia 152.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 147.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6141.T</td><td class="l">DMG MORI CO LTD</td><td class="l">przebicie wsparcia 2492.50 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 2361.50</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6324.T</td><td class="l">HARMONIC DRIVE SYSTEMS</td><td class="l">przebicie wsparcia 4010.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 3722.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6471.T</td><td class="l">NSK</td><td class="l">przebicie wsparcia 913.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 892.50</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6506.T</td><td class="l">YASKAWA ELECTRIC CORP</td><td class="l">przebicie wsparcia 3351.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 3180.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6645.T</td><td class="l">OMRON CORP</td><td class="l">przebicie wsparcia 4484.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 4363.00</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">688017.SS</td><td class="l">LEADER HARMONIOUS DRIVE SYSTEMS</td><td class="l">przebicie wsparcia 245.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 230.80</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">7267.T</td><td class="l">HONDA MOTOR CO</td><td class="l">przebicie wsparcia 1756.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 1736.50</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9660.HK</td><td class="l">HORIZONROBOT-W</td><td class="l">przebicie wsparcia 3.38 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 3.12</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">9880.HK</td><td class="l">UBTECH ROBOTICS</td><td class="l">przebicie wsparcia 60.20 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 57.90</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ALNT</td><td class="l">Allient Inc.</td><td class="l">przebicie wsparcia 73.84 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 71.64</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AMAT</td><td class="l">Applied Materials, Inc.</td><td class="l">przebicie wsparcia 316.47 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 302.63</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">AU</td><td class="l">AngloGold Ashanti PLC</td><td class="l">przebicie wsparcia 72.94 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 72.43</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">CRWV</td><td class="l">CoreWeave, Inc.</td><td class="l">przebicie wsparcia 40.58 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 39.51</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ETN</td><td class="l">Eaton Corporation, PLC</td><td class="l">przebicie wsparcia 323.28 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 311.33</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GDX</td><td class="l">VanEck Gold Miners ETF</td><td class="l">przebicie wsparcia 69.74 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 68.40</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GEV</td><td class="l">GE Vernova Inc.</td><td class="l">przebicie wsparcia 747.00 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 699.33</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GFI</td><td class="l">Gold Fields Limited</td><td class="l">przebicie wsparcia 32.28 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 31.57</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">GFS</td><td class="l">GlobalFoundries Inc.</td><td class="l">przebicie wsparcia 35.84 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 35.56</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">INTC</td><td class="l">Intel Corporation</td><td class="l">przebicie wsparcia 51.51 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 51.28</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">KLAC</td><td class="l">KLA Corporation</td><td class="l">przebicie wsparcia 127.98 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 126.87</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">LHX</td><td class="l">L3Harris Technologies, Inc.</td><td class="l">przebicie wsparcia 252.02 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 249.89</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">LRCX</td><td class="l">Lam Research Corporation</td><td class="l">przebicie wsparcia 184.24 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 183.27</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">META</td><td class="l">Meta Platforms, Inc.</td><td class="l">przebicie wsparcia 583.80 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 560.84</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">MRVL</td><td class="l">Marvell Technology, Inc.</td><td class="l">przebicie wsparcia 132.54 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 122.28</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ORCL</td><td class="l">Oracle Corporation</td><td class="l">przebicie wsparcia 109.21 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 101.19</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">OUST</td><td class="l">Ouster, Inc.</td><td class="l">przebicie wsparcia 27.35 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 23.80</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">PLTR</td><td class="l">Palantir Technologies Inc.</td><td class="l">przebicie wsparcia 152.60 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 143.49</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">QCOM</td><td class="l">QUALCOMM Incorporated</td><td class="l">przebicie wsparcia 155.38 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 149.94</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">ROK</td><td class="l">Rockwell Automation, Inc.</td><td class="l">przebicie wsparcia 369.31 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 361.93</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">SMH</td><td class="l">VanEck Semiconductor ETF</td><td class="l">przebicie wsparcia 445.59 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 400.06</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">TER</td><td class="l">Teradyne, Inc.</td><td class="l">przebicie wsparcia 211.63 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 204.78</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">TKR</td><td class="l">Timken Company (The)</td><td class="l">przebicie wsparcia 98.77 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 97.96</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">VRT</td><td class="l">Vertiv Holdings, LLC</td><td class="l">przebicie wsparcia 170.80 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 166.24</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">WPM</td><td class="l">Wheaton Precious Metals Corp</td><td class="l">przebicie wsparcia 113.63 w dół</td><td class="wrap">lokalny dołek z ostatnich 90 sesji; kurs 109.91</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+<section class="card">
+  <h2><span class="icon">📈</span>Przecięcie SMA200 <span class="sub">(4)</span></h2>
+  <div class="scroll"><table><thead><tr><th class="l">Ticker</th><th class="l">Nazwa</th><th class="l">Sygnał</th><th class="l">Szczegóły</th><th class="l">Listy</th></tr></thead><tbody>
+    <tr>
+      <td class="l sym">3231.TW</td><td class="l">WISTRON CORPORATION</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 147.00, średnia 155.77</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">6902.T</td><td class="l">DENSO CORP</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 1900.00, średnia 1908.29</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">NST.AX</td><td class="l">NTH STAR FPO [NST]</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 21.95, średnia 22.55</td>
+      <td class="l"></td>
+    </tr><tr>
+      <td class="l sym">TLN</td><td class="l">Talen Energy Corporation</td><td class="l">przebicie SMA200 w dół</td><td class="wrap">kurs 332.92, średnia 349.22</td>
+      <td class="l"></td>
+    </tr>
+  </tbody></table></div>
+</section>
+
+
+  <footer>
+    Dane: Yahoo Finance (opóźnienie ok. 15 min), SEC EDGAR, screener TradingView. Odświeżane automatycznie przez GitHub Actions.
+    Informacja, nie porada inwestycyjna — decyzje podejmujesz na własną odpowiedzialność.
+  </footer>
+</div>
+
+</body>
+</html>
